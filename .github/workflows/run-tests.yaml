@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  test:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
@@ -30,7 +30,7 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install poetry
+    - name: Run poetry image
       uses: abatilo/actions-poetry@v2.0.0
       with:
           poetry-version: 1.1.13
@@ -40,3 +40,57 @@ jobs:
     - name: Run tests
       run: |
         poetry run pytest
+  code-quality:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.10.2]
+        poetry-version: [1.1.13]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run poetry image
+        uses: abatilo/actions-poetry@v2.0.0
+        with:
+          poetry-version: ${{ matrix.poetry-version }}
+      - name: Install dependencies
+        run: poetry install
+      - name: Run black
+        run: poetry run black . --check
+      - name: Run isort
+        run: poetry run isort . --check-only --profile black
+      - name: Run flake8
+        run: poetry run flake8 src
+      - name: Run pylint
+        run: poetry run pylint src --recursive=y
+      - name: Run bandit
+        run: poetry run bandit -r src
+      - name: Run saftey
+        run: poetry run safety check
+      - name: Run mypy
+        run: poetry run mypy src
+  generate-doc:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.10.2]
+        poetry-version: [1.1.13]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run poetry image
+        uses: abatilo/actions-poetry@v2.0.0
+        with:
+          poetry-version: ${{ matrix.poetry-version }}
+      - name: Install dependencies
+        run: poetry install
+      - name: Run pdoc3
+        run: poetry run pdoc3 .\src\pygenesis\ --html -o doc --skip-errors
