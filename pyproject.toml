@@ -12,7 +12,6 @@ requests = "^2.27.1"
 bandit = "^1.7.4"
 black = "^22.3.0"
 flake8-docstrings = "^1.6.0"
-flake9 = "^3.8.3"
 isort = "^5.10.1"
 mypy = "^0.942"
 pdoc3 = "^0.10.0"
@@ -21,23 +20,11 @@ pylint = "^2.13.4"
 pytest = "^7.1.1"
 pytest-cov = "^3.0.0"
 safety = "^1.10.3"
+flake8 = "^4.0.1"
 
 [tool.black]
 line-length = 80
 target-version = ['py39']
-
-[tool.flake8]
-count = true
-docstring-convention = "google"
-exclude = ".git,__pycache__,docs,build,dist,.venv,.github"
-filename = "*py"
-ignore = "E4,E501"
-max-complexity = 10
-max-line-length = 80
-require-plugins = "flake8-docstrings"
-show-source = true
-statistics = true
-tee = true
 
 [build-system]
 build-backend = "poetry.core.masonry.api"
