@@ -19,6 +19,7 @@ bandit = "^1.7.4"
 safety = "^1.10.3"
 mypy = "^0.942"
 pdoc3 = "^0.10.0"
+pytest-cov = "^3.0.0"
 
 [tool.black]
 line-length = 120
