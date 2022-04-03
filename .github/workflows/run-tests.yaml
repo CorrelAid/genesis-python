@@ -64,7 +64,7 @@ jobs:
       - name: Run isort
         run: poetry run isort . --check-only --profile black
       - name: Run flake8
-        run: poetry run flake8 src
+        run: poetry run flake8 src --output-file=flake8_report.txt
       - name: Run pylint
         run: poetry run pylint src --recursive=y
       - name: Run bandit
@@ -93,4 +93,4 @@ jobs:
       - name: Install dependencies
         run: poetry install
       - name: Run pdoc3
-        run: poetry run pdoc3 ./src/pygenesis --html -o doc --skip-errors
+        run: poetry run pdoc3 ./src/pygenesis --html -o docs --skip-errors
