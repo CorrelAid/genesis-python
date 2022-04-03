@@ -22,4 +22,8 @@ repos:
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.14.2
     hooks:
-      - id: check-github-workflows
+      - id: check-jsonschema
+        name: "Check GitHub Workflows"
+        files: ^\.github/workflows/
+        types: [yaml]
+        args: ["--schemafile", "https://json.schemastore.org/github-workflow"]
