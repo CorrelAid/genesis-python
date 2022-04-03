@@ -69,7 +69,7 @@ jobs:
         run: poetry run pylint src --recursive=y
       - name: Run bandit
         run: poetry run bandit -r src
-      - name: Run saftey
+      - name: Run safety
         run: poetry run safety check
       - name: Run mypy
         run: poetry run mypy src
