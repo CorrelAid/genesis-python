@@ -62,7 +62,7 @@ def _handle_status_code(status_code: int) -> None:
     Raises:
         Exception: Generic exception if 401 is returned
     """
-    if status_code == 401:
+    if (status_code // 100) == 4:
         raise Exception("Error: You are not allowed to call this server.")
 
 
@@ -77,7 +77,7 @@ def _handle_destatis_status_code(response: requests.Response) -> None:
     """
     try:
         response_dict = response.json()
-    except Exception as e:
+    except Exception:
         return None
     if "Status" in response_dict.keys():
         _check_problematic_destatis_status_code(response_dict["Status"]["Code"])
