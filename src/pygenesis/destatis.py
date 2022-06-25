@@ -62,3 +62,17 @@ def get_cubefile(query_params: dict) -> str:
     response = requests.request("GET", url, params=params, verify=False)
 
     return response.text
+
+
+def get_find(query_params: dict) -> list:
+    url = f"https://www-genesis.destatis.de/genesisWS/rest/2020/find/find"
+
+    params = {
+        "username": config["PYGENESIS_USERNAME"],
+        "password": config["PYGENESIS_PASSWORD"],
+    }
+    params |= query_params
+
+    response = requests.request("GET", url, params=params, verify=False)
+
+    return response.json()
