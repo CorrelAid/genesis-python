@@ -54,7 +54,7 @@ def get_cube_metadata_header(
 
     # header can have multiple entries with same label, which is problematic for pandas
     # so lets just add a counter
-    header = [None] * len(raw_header)
+    header = [""] * len(raw_header)
     for name in set(raw_header):
         if raw_header.count(name) == 1:
             header[raw_header.index(name)] = name
@@ -88,7 +88,7 @@ def parse_cube(data: str) -> dict:
     """
     cube = {}
     header = None
-    data_block = []
+    data_block: list[pd.DataFrame] = []
 
     for line in data.splitlines():
         # skip all rows until first header
@@ -100,7 +100,7 @@ def parse_cube(data: str) -> dict:
                 cube[header_type] = pd.DataFrame(data_block, columns=header)
 
             header = get_cube_metadata_header(line, rename_duplicates=True)
-            header_type = get_cube_metadata_header_type(line)
+            header_type: str = get_cube_metadata_header_type(line)
             data_block = []
             continue
 

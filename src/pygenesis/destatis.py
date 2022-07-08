@@ -5,7 +5,7 @@ import requests
 config = dotenv.dotenv_values()
 
 
-def get_metadata(endpoint: str, name: str) -> dict:
+def get_metadata(endpoint: str, name: str):
     """Method for downloading metadata from www-genesis.destatis.de.
 
     Method supports the following endpoints:
@@ -36,7 +36,7 @@ def get_metadata(endpoint: str, name: str) -> dict:
     return response.json()
 
 
-def get_catalogue(endpoint: str, query_params: dict) -> list[dict]:
+def get_catalogue(endpoint: str, query_params: dict):
     """Method for downloading catalogue data from www-genesis.destatis.de.
 
     Args:
@@ -59,7 +59,7 @@ def get_catalogue(endpoint: str, query_params: dict) -> list[dict]:
     return response.json()
 
 
-def get_cubefile(query_params: dict) -> str:
+def get_cubefile(query_params: dict):
     """Method for downloading cube files from www-genesis.destatis.de.
 
     Args:
