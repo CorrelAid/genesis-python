@@ -21,7 +21,7 @@ def get_tablefile_data(
         pd.DataFrame
     """
 
-    query_params = query_params or dict()
+    query_params = query_params or {}
     params = {
         "username": CONFIG["PYGENESIS_USERNAME"],
         "password": CONFIG["PYGENESIS_PASSWORD"],
