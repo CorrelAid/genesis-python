@@ -52,35 +52,24 @@ confidence=
 # --disable=W"
 disable=abstract-method,
         apply-builtin,
-        arguments-differ,
-        attribute-defined-outside-init,
         backtick,
         bad-option-value,
         basestring-builtin,
         buffer-builtin,
         c-extension-no-member,
-        consider-using-enumerate,
         cmp-builtin,
         cmp-method,
         coerce-builtin,
         coerce-method,
         delslice-method,
         div-method,
-        duplicate-code,
-        eq-without-hash,
         execfile-builtin,
         file-builtin,
         filter-builtin-not-iterating,
         fixme,
         getslice-method,
-        global-statement,
         hex-method,
         idiv-method,
-        implicit-str-concat-in-sequence,
-        import-error,
-        import-self,
-        import-star-module-level,
-        inconsistent-return-statements,
         input-builtin,
         intern-builtin,
         invalid-str-codec,
@@ -88,11 +77,6 @@ disable=abstract-method,
         long-builtin,
         long-suffix,
         map-builtin-not-iterating,
-        misplaced-comparison-constant,
-        missing-function-docstring,
-        metaclass-assignment,
-        next-method-called,
-        next-method-defined,
         no-absolute-import,
         no-else-break,
         no-else-continue,
@@ -109,7 +93,6 @@ disable=abstract-method,
         old-octal-literal,
         old-raise-syntax,
         parameter-unpacking,
-        print-statement,
         raising-string,
         range-builtin-not-iterating,
         raw_input-builtin,
@@ -124,28 +107,14 @@ disable=abstract-method,
         suppressed-message,
         sys-max-int,
         too-few-public-methods,
-        too-many-ancestors,
-        too-many-arguments,
-        too-many-boolean-expressions,
-        too-many-branches,
-        too-many-instance-attributes,
-        too-many-locals,
-        too-many-nested-blocks,
-        too-many-public-methods,
-        too-many-return-statements,
-        too-many-statements,
-        trailing-newlines,
         unichr-builtin,
         unicode-builtin,
         unnecessary-pass,
         unpacking-in-except,
-        useless-else-on-loop,
-        useless-object-inheritance,
-        useless-suppression,
         using-cmp-argument,
         wrong-import-order,
         xrange-builtin,
-        zip-builtin-not-iterating,
+        zip-builtin-not-iterating
 
 
 [REPORTS]
@@ -265,7 +234,7 @@ generated-members=
 [FORMAT]
 
 # Maximum number of characters on a single line.
-max-line-length=80
+max-line-length=120
 
 # TODO(https://github.com/PyCQA/pylint/issues/3352): Direct pylint to exempt
 # lines made too long by directives to pytype.
@@ -292,7 +261,7 @@ max-module-lines=99999
 # spaces.  Google's externaly-published style guide says 4, consistent with
 # PEP 8.  Here, we use 2 spaces, for conformity with many open-sourced Google
 # projects (like TensorFlow).
-indent-string='  '
+indent-string='    '
 
 # Number of spaces of indent required inside a hanging  or continued line.
 indent-after-paren=4
