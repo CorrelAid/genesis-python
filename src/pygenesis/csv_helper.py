@@ -32,4 +32,4 @@ def _cut_footer(df: pd.DataFrame) -> pd.DataFrame():
     Returns:
         pd.DataFrame
     """
-    return df.iloc[:-4, :]  # maybe no hardcode
+    return df.iloc[:-4, :]

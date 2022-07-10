@@ -80,12 +80,13 @@ def _handle_destatis_status_code(response: requests.Response) -> None:
     except Exception:
         return None
     if "Status" in response_dict.keys():
-        _check_problematic_destatis_status_code(response_dict["Status"]["Code"])
+        _check_destatis_status_code(response_dict["Status"]["Code"])
 
 
-def _check_problematic_destatis_status_code(destatis_status_code: int) -> None:
+def _check_destatis_status_code(destatis_status_code: int) -> None:
     """
-    Helper method which checks if the status code from destatis is problmatic.
+    Helper method which checks the status code from destatis.
+    If the status code is not valid an exception will be raised.
 
     Args:
         destatis_status_code (int): Status code from destatis
