@@ -1,8 +1,9 @@
 """Module contains business logic related to destatis tables."""
 import pandas as pd
-from config_loader import CONFIG
-from csv_helper import get_df_from_text
-from http_helper import get_response_from_endpoint
+
+from pygenesis.config_loader import CONFIG
+from pygenesis.csv_helper import get_df_from_text
+from pygenesis.http_helper import get_response_from_endpoint
 
 
 def get_tablefile_data(
