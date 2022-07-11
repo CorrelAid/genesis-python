@@ -77,7 +77,7 @@ def _handle_destatis_status_code(response: requests.Response) -> None:
     """
     try:
         response_dict = response.json()
-    except TypeError:
+    except ValueError:
         return None
     if "Status" in response_dict.keys():
         _check_destatis_status_code(response_dict["Status"]["Code"])
