@@ -63,7 +63,9 @@ def _handle_status_code(status_code: int) -> None:
         Exception: Generic exception if 401 is returned
     """
     if (status_code // 100) == 4:
-        raise Exception("Error: You are not allowed to call this server.")
+        raise Exception(
+            f"Error {status_code}: The server returned a {status_code} status code"
+        )
 
 
 def _handle_destatis_status_code(response: requests.Response) -> None:
