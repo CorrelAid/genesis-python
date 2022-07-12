@@ -22,7 +22,7 @@ def get_df_from_text(data_text: str, skiprows=0) -> pd.DataFrame:
     return _cut_footer(pd.read_csv(data_str, sep=";", skiprows=skiprows))
 
 
-def _cut_footer(df: pd.DataFrame) -> pd.DataFrame():
+def _cut_footer(df: pd.DataFrame) -> pd.DataFrame:
     """
     Helper fucntion to cut the footer of a destatis csv file.
 
