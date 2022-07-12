@@ -1,7 +1,18 @@
+"""Module provides a demo class for encapsulating the statistic object from GENESIS."""
 from pygenesis.destatis import get_catalogue, get_metadata
 
 
 class Statistic:
+    """A class representing the statistic object from the GENESIS database.
+
+    Attributes:
+        name (str): The unique EVAS ID for this statistic.
+        metadata (dict): The metadata for this statistic.
+        cubes (list): All cubes that are associated with this statistic.
+        variables (list): All variables that are associated with this statistic.
+        tables (list): All tables that are associated with that statistic.
+    """
+
     def __init__(self, name: str) -> None:
         self.name = name
         self.metadata: dict = get_metadata("statistic", name).get("Object", {})
