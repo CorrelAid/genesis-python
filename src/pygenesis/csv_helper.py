@@ -19,17 +19,4 @@ def get_df_from_text(data_text: str) -> pd.DataFrame:
         return None
 
     data_str = StringIO(f"""{data_text}""")
-    return _cut_footer(pd.read_csv(data_str, sep=";"))
-
-
-def _cut_footer(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Helper fucntion to cut the footer of a destatis csv file.
-
-    Args:
-        df (pd.DataFrame): DataFrame which contains the footer
-
-    Returns:
-        pd.DataFrame
-    """
-    return df.iloc[:-4, :]
+    return pd.read_csv(data_str, sep=";")
