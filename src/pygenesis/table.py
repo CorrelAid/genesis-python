@@ -28,9 +28,10 @@ def get_tablefile_data(
         "password": CONFIG["PYGENESIS_PASSWORD"],
         "name": table_name,
         "area": table_area,
+        "format": "ffcsv",
     }
 
     params |= query_params
 
     response = get_response_from_endpoint("data", "tablefile", params)
-    return get_df_from_text(response.text, skiprows=6)
+    return get_df_from_text(response.text)

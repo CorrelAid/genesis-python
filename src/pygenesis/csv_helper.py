@@ -4,7 +4,7 @@ from io import StringIO
 import pandas as pd
 
 
-def get_df_from_text(data_text: str, skiprows=0) -> pd.DataFrame:
+def get_df_from_text(data_text: str) -> pd.DataFrame:
     """
     Helper function to convert response text to a pandas DataFrame.
 
@@ -19,7 +19,7 @@ def get_df_from_text(data_text: str, skiprows=0) -> pd.DataFrame:
         return None
 
     data_str = StringIO(f"""{data_text}""")
-    return _cut_footer(pd.read_csv(data_str, sep=";", skiprows=skiprows))
+    return _cut_footer(pd.read_csv(data_str, sep=";"))
 
 
 def _cut_footer(df: pd.DataFrame) -> pd.DataFrame:
