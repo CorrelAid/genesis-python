@@ -26,8 +26,8 @@ def get_response_from_endpoint(
 
     response.encoding = "UTF-8"  # discuss if necessary
 
-    _handle_status_code(response.status_code)
-    _handle_destatis_status_code(response)
+    _check_invalid_status_code(response.status_code)
+    _check_invalid_destatis_status_code(response)
     return response
 
 
@@ -46,13 +46,10 @@ def _request_wrapper(method: str, url: str, params: dict) -> requests.Response:
     Returns:
         requests.Response: Returns the reponse object
     """
-    try:
-        return requests.request(method, url, params=params)
-    except Exception as e:  # ToDo: fix general exception issue
-        raise e
+    return requests.request(method, url, params=params)
 
 
-def _handle_status_code(status_code: int) -> None:
+def _check_invalid_status_code(status_code: int) -> None:
     """
     Helper method which handles the status code from the response
 
@@ -68,7 +65,7 @@ def _handle_status_code(status_code: int) -> None:
         )
 
 
-def _handle_destatis_status_code(response: requests.Response) -> None:
+def _check_invalid_destatis_status_code(response: requests.Response) -> None:
     """
     Helper method which handles the status code returned from destatis
     (if exists)
@@ -81,8 +78,7 @@ def _handle_destatis_status_code(response: requests.Response) -> None:
         response_dict = response.json()
     except ValueError:
         return None
-    if "Status" in response_dict.keys():
-        _check_destatis_status_code(response_dict["Status"]["Code"])
+    _check_destatis_status_code(response_dict.get("Status", {}).get("Code"))
     return None
 
 
@@ -95,7 +91,7 @@ def _check_destatis_status_code(destatis_status_code: int) -> None:
         destatis_status_code (int): Status code from destatis
 
     Raises:
-        Exception: Generic exception if the status code from destatis is equl
+        Exception: Generic exception if the status code from destatis is equal
         to -1
     """
     if destatis_status_code == -1:

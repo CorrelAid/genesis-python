@@ -1,5 +1,7 @@
 """Module loads the config (.env) file. (Placeholder for additional logic related to the config.)"""
-from dotenv import dotenv_values, load_dotenv
+import os
 
-if load_dotenv():
+from dotenv import dotenv_values
+
+if os.path.isfile(".env"):
     CONFIG = dotenv_values()
