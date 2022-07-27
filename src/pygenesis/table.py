@@ -32,6 +32,3 @@ def get_tablefile_data(
 
     response = get_response_from_endpoint("data", "tablefile", params)
     return get_df_from_text(response.text)
-
-
-get_tablefile_data("4111-111")
