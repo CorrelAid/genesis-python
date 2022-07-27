@@ -5,3 +5,5 @@ from dotenv import dotenv_values
 
 if os.path.isfile(".env"):
     CONFIG = dotenv_values()
+else:
+    print(os.getcwd())
