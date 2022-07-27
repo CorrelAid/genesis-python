@@ -1,7 +1,6 @@
 """Module contains business logic related to destatis tables."""
 import pandas as pd
 
-from pygenesis.config_loader import CONFIG
 from pygenesis.csv_helper import get_df_from_text
 from pygenesis.http_helper import get_response_from_endpoint
 
@@ -24,8 +23,6 @@ def get_tablefile_data(
 
     query_params = query_params or {}
     params = {
-        "username": CONFIG["PYGENESIS_USERNAME"],
-        "password": CONFIG["PYGENESIS_PASSWORD"],
         "name": table_name,
         "area": table_area,
         "format": "ffcsv",

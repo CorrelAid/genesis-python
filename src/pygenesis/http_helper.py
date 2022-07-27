@@ -1,6 +1,8 @@
 """Wrapper module for the data endpoint."""
 import requests
 
+from pygenesis.config_loader import CONFIG
+
 # TODO: \global vars init? .env?
 base_url = "https://www-genesis.destatis.de/genesisWS/rest/2020"
 
@@ -22,31 +24,18 @@ def get_response_from_endpoint(
     """
     url = f"{base_url}/{endpoint}/{method}"
 
-    response = _request_wrapper("GET", url, params)
+    params |= {
+        "username": CONFIG["PYGENESIS_USERNAME"],
+        "password": CONFIG["PYGENESIS_PASSWORD"],
+    }
 
-    response.encoding = "UTF-8"  # discuss if necessary
+    response = requests.get(url, params=params)
+
+    response.encoding = "UTF-8"
 
     _check_invalid_status_code(response.status_code)
     _check_invalid_destatis_status_code(response)
     return response
-
-
-def _request_wrapper(method: str, url: str, params: dict) -> requests.Response:
-    """
-    Generic wrapper for every request
-
-    Args:
-        method (str): the requests method (eg. GET, POST, PUT, ...)
-        url (str): the url for the connection
-        params (dict): dictionary of query parameters
-
-    Raises:
-        e: generic exception if there is an exception in the request
-
-    Returns:
-        requests.Response: Returns the reponse object
-    """
-    return requests.request(method, url, params=params)
 
 
 def _check_invalid_status_code(status_code: int) -> None:
