@@ -6,7 +6,7 @@ from pygenesis.http_helper import get_response_from_endpoint
 
 
 def get_tablefile_data(
-    table_name: str, table_area: str, query_params: dict = None
+    table_name: str, table_area: str = "all", query_params: dict = None
 ) -> pd.DataFrame:
     """
     Based on the table name, table area and additional query parameters the
@@ -14,9 +14,9 @@ def get_tablefile_data(
 
     Args:
         table_name (str): Name of the table
-        table_area (str): Area of the table (all, ..)
+        table_area (str, optional): Area of the table (Defaul: all)
         query_params (dict, optional): Additional query parameters
-
+        (Default: None)
     Returns:
         pd.DataFrame
     """
@@ -32,3 +32,6 @@ def get_tablefile_data(
 
     response = get_response_from_endpoint("data", "tablefile", params)
     return get_df_from_text(response.text)
+
+
+get_tablefile_data("4111-111")
