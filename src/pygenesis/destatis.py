@@ -1,8 +1,9 @@
 """Module provides functions to work with the GENESIS REST-API."""
-import dotenv
 import requests
 
-config = dotenv.dotenv_values()
+from pygenesis.config import load_config
+
+config = load_config()
 
 
 def get_metadata(endpoint: str, name: str):
@@ -23,11 +24,11 @@ def get_metadata(endpoint: str, name: str):
     Returns:
         dict: Content of "Object" response.
     """
-    url = f"https://www-genesis.destatis.de/genesisWS/rest/2020/metadata/{endpoint}"
+    url = f"{config['GENESIS API']['base_url']}metadata/{endpoint}"
 
     params = {
-        "username": config["PYGENESIS_USERNAME"],
-        "password": config["PYGENESIS_PASSWORD"],
+        "username": config["GENESIS API"]["username"],
+        "password": config["GENESIS API"]["password"],
         "name": name,
     }
 
@@ -46,11 +47,11 @@ def get_catalogue(endpoint: str, query_params: dict):
     Returns:
         list: A list of hits in the catalog matching the query parameter.
     """
-    url = f"https://www-genesis.destatis.de/genesisWS/rest/2020/catalogue/{endpoint}"
+    url = f"{config['GENESIS API']['base_url']}catalogue/{endpoint}"
 
     params = {
-        "username": config["PYGENESIS_USERNAME"],
-        "password": config["PYGENESIS_PASSWORD"],
+        "username": config["GENESIS API"]["username"],
+        "password": config["GENESIS API"]["password"],
     }
     params |= query_params
 
@@ -68,11 +69,11 @@ def get_cubefile(query_params: dict):
     Returns:
         str: The content of the cubefile.
     """
-    url = "https://www-genesis.destatis.de/genesisWS/rest/2020/data/cubefile"
+    url = f"{config['GENESIS API']['base_url']}data/cubefile"
 
     params = {
-        "username": config["PYGENESIS_USERNAME"],
-        "password": config["PYGENESIS_PASSWORD"],
+        "username": config["GENESIS API"]["username"],
+        "password": config["GENESIS API"]["password"],
     }
     params |= query_params
 
