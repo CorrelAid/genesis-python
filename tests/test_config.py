@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 
 from pygenesis.config import (
-    DEFAULT_CONFIG_DIR,
     DEFAULT_SETTINGS_FILE,
+    _write_config,
     get_config_path_from_settings,
     init_config,
     load_config,
@@ -18,6 +18,13 @@ from pygenesis.config import (
 def config_dir(tmp_path_factory):
     config_dir = tmp_path_factory.mktemp(".pygenesis")
     return config_dir
+
+
+@pytest.fixture(autouse=True)
+def restore_settings():
+    old_settings = load_settings()
+    yield
+    _write_config(old_settings, DEFAULT_SETTINGS_FILE)
 
 
 def test_settings():
@@ -78,7 +85,7 @@ def test_missing_username(config_dir, caplog):
 
     caplog.clear()
 
-    config = load_config()
+    _ = load_config()
 
     assert caplog.records[0].levelname == "CRITICAL"
     assert "Username and/or password are missing!" in caplog.text
