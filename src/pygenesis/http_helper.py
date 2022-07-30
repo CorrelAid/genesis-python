@@ -1,10 +1,9 @@
 """Wrapper module for the data endpoint."""
 import requests
 
-from pygenesis.config_loader import CONFIG
+from pygenesis.config import load_config
 
-# TODO: \global vars init? .env?
-base_url = "https://www-genesis.destatis.de/genesisWS/rest/2020"
+config = load_config()
 
 
 def get_response_from_endpoint(
@@ -22,11 +21,11 @@ def get_response_from_endpoint(
     Returns:
         requests.Response: the response from destatis
     """
-    url = f"{base_url}/{endpoint}/{method}"
+    url = f"{config['GENESIS API']['base_url']}/{endpoint}/{method}"
 
     params |= {
-        "username": CONFIG["PYGENESIS_USERNAME"],
-        "password": CONFIG["PYGENESIS_PASSWORD"],
+        "username": config["GENESIS API"]["username"],
+        "password": config["GENESIS API"]["password"],
     }
 
     response = requests.get(url, params=params)
