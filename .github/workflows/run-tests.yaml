@@ -94,3 +94,8 @@ jobs:
         run: poetry install
       - name: Run pdoc3
         run: poetry run pdoc3 ./src/pygenesis --html -o docs --skip-errors
+      - name: Archive pdoc3 documentation
+        uses: actions/upload-artifact@v3
+        with:
+          name: pdoc3-html-doc
+          path: docs/**/*.html

@@ -1,12 +1,12 @@
 """Module contains business logic related to destatis tables."""
 import pandas as pd
-from config_loader import CONFIG
-from csv_helper import get_df_from_text
-from http_helper import get_response_from_endpoint
+
+from pygenesis.csv_helper import get_df_from_text
+from pygenesis.http_helper import get_response_from_endpoint
 
 
 def get_tablefile_data(
-    table_name: str, table_area: str, query_params: dict = None
+    table_name: str, table_area: str = "all", **kwargs
 ) -> pd.DataFrame:
     """
     Based on the table name, table area and additional query parameters the
@@ -14,22 +14,22 @@ def get_tablefile_data(
 
     Args:
         table_name (str): Name of the table
-        table_area (str): Area of the table (all, ..)
+        table_area (str, optional): Area of the table (Defaul: all)
         query_params (dict, optional): Additional query parameters
-
+        (Default: None)
     Returns:
         pd.DataFrame
     """
 
-    query_params = query_params or dict()
+    kwargs = kwargs or {}
+
     params = {
-        "username": CONFIG["PYGENESIS_USERNAME"],
-        "password": CONFIG["PYGENESIS_PASSWORD"],
         "name": table_name,
         "area": table_area,
+        "format": "ffcsv",
     }
 
-    params |= query_params
+    params |= kwargs
 
     response = get_response_from_endpoint("data", "tablefile", params)
-    return get_df_from_text(response.text, skiprows=6)
+    return get_df_from_text(response.text)

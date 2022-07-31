@@ -7,4 +7,6 @@ import pygenesis as pgen
 print("Version:", pgen.__version__)
 ```
 """
+from pygenesis.config import init_config
+
 __version__ = "0.1.0"
