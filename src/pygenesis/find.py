@@ -1,12 +1,42 @@
 import pandas as pd
 
+from pygenesis.csv_helper import get_df_from_text
+from pygenesis.http_helper import get_response_from_endpoint
+
 pd.set_option("max_colwidth", None)
 pd.set_option("expand_frame_repr", False)
 
-from pygenesis.destatis import get_find
+
+def get_find_data(query: str, category: str, **kwargs) -> pd.DataFrame:
+    """
+    Based on the table name, table area and additional query parameters the
+    tablefile method from the data-endpoint will be queried.
+
+    Args:
+        table_name (str): Name of the table
+        table_area (str, optional): Area of the table (Defaul: all)
+        query_params (dict, optional): Additional query parameters
+        (Default: None)
+    Returns:
+        pd.DataFrame
+    """
+
+    kwargs = kwargs or {}
+
+    params = {
+        "term": query,
+        "category": category,
+    }
+
+    params |= kwargs
+
+    response = get_response_from_endpoint("find", "find", params)
+    response_json = response.json()[category.capitalize()]
+
+    return pd.DataFrame(response_json).replace("\n", "", regex=True)
 
 
-class Find:
+class SummaryResults:
     def __init__(self, query: str, top_n_preview: int = 5) -> None:
         """Method for retrieving data from find endoint.
 
@@ -23,44 +53,30 @@ class Find:
 
         self.query = query
         self.top_n_preview = top_n_preview
-        self.statistics: list = pd.DataFrame(
-            get_find({"term": query, "category": "statistics"}).get(
-                "Statistics"
-            )
-        ).replace("\n", "", regex=True)
-        self.variables: list = pd.DataFrame(
-            get_find({"term": query, "category": "variables"}).get("Variables")
-        ).replace("\n", "", regex=True)
-        self.tables: list = pd.DataFrame(
-            get_find({"term": query, "category": "tables"}).get("Tables")
-        ).replace("\n", "", regex=True)
+        self.statistics = get_find_data(query, "statistics")
+        self.variables = get_find_data(query, "variables")
+        self.tables = get_find_data(query, "tables")
+
         print(self._print_summary())
 
     def _print_summary(self):
         return "\n".join(
             [
-                "##### Resultate #####",
+                "##### Results #####",
                 "{}".format("-" * 40),
-                "# Anzahl Tabellen: {}".format(len(self.tables)),
-                "# Vorschau:",
+                "# Number of tables: {}".format(len(self.tables)),
+                "# Preview:",
                 str(self.tables.iloc[0 : self.top_n_preview]),
                 "{}".format("-" * 40),
-                "# Anzahl Statistiken: {}".format(len(self.statistics)),
-                "# Vorschau:",
+                "# Number of statistics: {}".format(len(self.statistics)),
+                "# Preview:",
                 str(self.statistics.iloc[0 : self.top_n_preview]),
                 "{}".format("-" * 40),
-                "# Anzahl Variablen: {}".format(len(self.variables)),
-                "# Vorschau:",
+                "# Number of variables: {}".format(len(self.variables)),
+                "# Preview:",
                 str(self.variables.iloc[0 : self.top_n_preview]),
                 "{}".format("-" * 40),
-                "# Info: Nutze objekt.tables, objekt.statistics or objekt.variables um weitere Informationen zu erhalten.",
+                "# Info: Use object.tables, object.statistics or object.variables to get all results.",
                 "{}".format("-" * 40),
             ]
         )
-
-
-if __name__ == "__main__":
-    find = Find("Studienanfänger")
-    print("statistics:", find.statistics)
-    print("variables:", find.variables)
-    print("tables:", find.tables)

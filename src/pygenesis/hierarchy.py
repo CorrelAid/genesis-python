@@ -1,9 +1,11 @@
+import os
+
 import pandas as pd
+
+from pygenesis.destatis import get_catalogue
 
 pd.set_option("max_colwidth", None)
 pd.set_option("expand_frame_repr", False)
-
-from pygenesis.destatis import get_catalogue
 
 
 class Hierarchy:
@@ -25,8 +27,11 @@ class Hierarchy:
 
     def _query_hierarchy(self):
 
+        evas_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "data", "evas.csv"
+        )
         classification: pd.DataFrame = pd.read_csv(
-            "data/evas.csv", encoding="utf8", sep=";", index_col=0
+            evas_path, encoding="utf8", sep=";", index_col=0
         )
 
         if self.code is None:
@@ -52,11 +57,6 @@ class Hierarchy:
                 "{}".format("-" * 40),
                 str(self.catalogue),
                 "{}".format("-" * 40),
-                "# Info: Nutze objekt.catalogue um die Elemente direkt abzufragen.",
+                "# Info: Use objekt.catalogue to access results.",
             ]
         )
-
-
-if __name__ == "__main__":
-    hierarchy = Hierarchy(211)
-    print(hierarchy.catalogue)
