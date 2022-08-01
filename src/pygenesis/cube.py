@@ -3,78 +3,41 @@ import copy
 
 import pandas as pd
 
-
-def is_cube_metadata_header(line: str) -> bool:
-    """Check if a line is a cube metadata header.
-
-    Args:
-        line (str): A single line of a cubefile.
-
-    Returns:
-        bool: True if the line starts with a "K", False otherwise.
-    """
-    return line[0] == "K"
+from pygenesis.cache import cache_data
+from pygenesis.http_helper import get_response_from_endpoint
 
 
-def get_cube_metadata_header_type(line: str) -> str:
-    """Return the header type.
+@cache_data
+def get_cubefile_data(
+    *, name: str, area: str = "all", **kwargs
+) -> pd.DataFrame:
+    """Return cube file data as pandas data frame.
+
+    Based on the cube name, cube area and additional query parameters the
+    cubefile method from the data-endpoint will be queried.
 
     Args:
-        line (str): A single line of a cubefile.
+        name (str): Name of the cube.
+        area (str, optional): Area of the cube. Defaults to "all".
 
     Returns:
-        str: The header type, which is the second entry in the header.
+        pd.DataFrame: Parsed cube file.
     """
-    return line.split(";")[1]
+    kwargs = kwargs or {}
 
+    params = {
+        "name": name,
+        "area": area,
+        "format": "csv",
+    }
 
-def get_cube_metadata_header(
-    line: str, rename_duplicates: bool = False
-) -> list[str]:
-    """Return the metadata header of a cubefile.
+    params |= kwargs
 
-    Args:
-        line (str): A single line of a cubefile.
-        rename_duplicates (bool, optional): If False, the raw header is returned.
-            If True, identical column names are appended with a unique counter.
-            Defaults to False.
+    response = get_response_from_endpoint("data", "cubefile", params)
+    cube_data = response.text
+    cube = rename_axes(parse_cube(cube_data))
 
-    Returns:
-        list[str]: A list of column names, except for "nur Werte" and "mit Werten".
-    """
-    raw_header = line.split(";")[2:]
-    raw_header = [
-        name
-        for name in raw_header
-        if name not in ['"nur Werte"', '"mit Werten"']
-    ]
-
-    if not rename_duplicates:
-        return raw_header
-
-    # header can have multiple entries with same label, which is problematic for pandas
-    # so lets just add a counter
-    header = [""] * len(raw_header)
-    for name in set(raw_header):
-        if raw_header.count(name) == 1:
-            header[raw_header.index(name)] = name
-        else:
-            for counter in range(raw_header.count(name)):
-                header[raw_header.index(name) + counter] = f"{name}-{counter+1}"
-
-    return header
-
-
-def parse_cube_data_line(line: str) -> list[str]:
-    """Return the content of a cube data line.
-
-    Args:
-        line (str): A single line of a cubefile.
-
-    Returns:
-        list[str]: The content of a cube data line, omitting the first element.
-    """
-    return line.split(";")[1:]
+    return cube["QEI"]
 
 
 def parse_cube(data: str) -> dict:
@@ -92,19 +55,19 @@ def parse_cube(data: str) -> dict:
 
     for line in data.splitlines():
         # skip all rows until first header
-        if header is None and not is_cube_metadata_header(line):
+        if header is None and not _is_cube_metadata_header(line):
             continue
 
-        if is_cube_metadata_header(line):
+        if _is_cube_metadata_header(line):
             if data_block:
                 cube[header_type] = pd.DataFrame(data_block, columns=header)
 
-            header = get_cube_metadata_header(line, rename_duplicates=True)
-            header_type: str = get_cube_metadata_header_type(line)
+            header = _get_cube_metadata_header(line, rename_duplicates=True)
+            header_type: str = _get_cube_metadata_header_type(line)
             data_block = []
             continue
 
-        line_content = parse_cube_data_line(line)
+        line_content = _parse_cube_data_line(line)
         data_block.append(line_content)
 
     # the last data block has no header after it so we have to do it here
@@ -157,3 +120,45 @@ def rename_axes(
     cube["QEI"].rename(columns=dict(zip(old_cols, new_cols)), inplace=True)
 
     return cube
+
+
+def _is_cube_metadata_header(line: str) -> bool:
+    """Check if a line is a cube metadata header."""
+    return line[0] == "K"
+
+
+def _get_cube_metadata_header_type(line: str) -> str:
+    """Return the header type."""
+    return line.split(";")[1]
+
+
+def _get_cube_metadata_header(
+    line: str, rename_duplicates: bool = False
+) -> list[str]:
+    """Return the metadata header of a cubefile."""
+    raw_header = line.split(";")[2:]
+    raw_header = [
+        name
+        for name in raw_header
+        if name not in ['"nur Werte"', '"mit Werten"']
+    ]
+
+    if not rename_duplicates:
+        return raw_header
+
+    # header can have multiple entries with same label, which is problematic for pandas
+    # so lets just add a counter
+    header = [""] * len(raw_header)
+    for name in set(raw_header):
+        if raw_header.count(name) == 1:
+            header[raw_header.index(name)] = name
+        else:
+            for counter in range(raw_header.count(name)):
+                header[raw_header.index(name) + counter] = f"{name}-{counter+1}"
+
+    return header
+
+
+def _parse_cube_data_line(line: str) -> list[str]:
+    """Return the content of a cube data line."""
+    return line.split(";")[1:]
