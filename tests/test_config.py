@@ -16,8 +16,7 @@ from pygenesis.config import (
 
 @pytest.fixture()
 def config_dir(tmp_path_factory):
-    config_dir = tmp_path_factory.mktemp(".pygenesis")
-    return config_dir
+    return tmp_path_factory.mktemp(".pygenesis")
 
 
 @pytest.fixture(autouse=True)
@@ -55,12 +54,17 @@ def test_init_config_with_config_dir(config_dir, caplog):
     assert caplog.records[1].levelname == "INFO"
     assert "Settings file updated" in caplog.text
     assert "New config was created" in caplog.text
+    assert (config_dir / "data").exists()
 
     config = load_config()
 
     assert isinstance(config, ConfigParser)
     assert len(config.sections()) > 0
+    assert config["DATA"]["cache_dir"] == str(config_dir / "data")
+    assert len(list((config_dir / "data").glob("*"))) == 0
+
     config_file = get_config_path_from_settings()
+
     assert config_file.exists() and config_file.is_file()
 
 
