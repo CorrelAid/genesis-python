@@ -3,39 +3,17 @@ import copy
 
 import pandas as pd
 
-from pygenesis.cache import cache_data
-from pygenesis.http_helper import get_response_from_endpoint
 
-
-@cache_data
-def get_cubefile_data(
-    *, name: str, area: str = "all", **kwargs
-) -> pd.DataFrame:
-    """Return cube file data as pandas data frame.
-
-    Based on the cube name, cube area and additional query parameters the
-    cubefile method from the data-endpoint will be queried.
+def get_data(data: str) -> pd.DataFrame:
+    """Return cubefile data as pandas data frame.
 
     Args:
-        name (str): Name of the cube.
-        area (str, optional): Area of the cube. Defaults to "all".
+        data (str): Raw cubefile content.
 
     Returns:
         pd.DataFrame: Parsed cube file.
     """
-    kwargs = kwargs or {}
-
-    params = {
-        "name": name,
-        "area": area,
-        "format": "csv",
-    }
-
-    params |= kwargs
-
-    response = get_response_from_endpoint("data", "cubefile", params)
-    cube_data = response.text
-    cube = rename_axes(parse_cube(cube_data))
+    cube = rename_axes(parse_cube(data))
 
     return cube["QEI"]
 
