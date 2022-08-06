@@ -7,38 +7,32 @@ pd.set_option("max_colwidth", None)
 pd.set_option("expand_frame_repr", False)
 
 
-def get_find_data(query: str, category: str, **kwargs) -> pd.DataFrame:
-    """
-    Based on the table name, table area and additional query parameters the
-    tablefile method from the data-endpoint will be queried.
+class Results:
+    def __init__(self, results: pd.DataFrame):
+        """Class that contains the results of a find query.
 
-    Args:
-        table_name (str): Name of the table
-        table_area (str, optional): Area of the table (Defaul: all)
-        query_params (dict, optional): Additional query parameters
-        (Default: None)
-    Returns:
-        pd.DataFrame
-    """
+        Args:
+            DataFrame (pd.DataFrame): Result of a search query.
+        """
+        self.df = results
 
-    kwargs = kwargs or {}
+    def __repr__(self):
+        return repr(self.df)
 
-    params = {
-        "term": query,
-        "category": category,
-    }
+    def __str__(self):
+        return repr(self.df)
 
-    params |= kwargs
+    def __len__(self):
+        len(self.df)
 
-    response = get_response_from_endpoint("find", "find", params)
-    response_json = response.json()[category.capitalize()]
-
-    return pd.DataFrame(response_json).replace("\n", "", regex=True)
+    def get_code(self, index: list):
+        code = self.df.iloc[index]["Code"]
+        return list(code)
 
 
-class SummaryResults:
+class Find:
     def __init__(self, query: str, top_n_preview: int = 5) -> None:
-        """Method for retrieving data from find endoint.
+        """Method for retrieving data from find endpoint.
 
         Args:
             query (str): The query that is provided to find endpoint.
@@ -53,9 +47,9 @@ class SummaryResults:
 
         self.query = query
         self.top_n_preview = top_n_preview
-        self.statistics = get_find_data(query, "statistics")
-        self.variables = get_find_data(query, "variables")
-        self.tables = get_find_data(query, "tables")
+        self.statistics = self._get_find_results(query, "statistics")
+        self.variables = self._get_find_results(query, "variables")
+        self.tables = self._get_find_results(query, "tables")
 
         print(self._print_summary())
 
@@ -64,19 +58,49 @@ class SummaryResults:
             [
                 "##### Results #####",
                 "{}".format("-" * 40),
-                "# Number of tables: {}".format(len(self.tables)),
+                "# Number of tables: {}".format(len(self.tables.df)),
                 "# Preview:",
-                str(self.tables.iloc[0 : self.top_n_preview]),
+                str(self.tables.df.iloc[0 : self.top_n_preview]),
                 "{}".format("-" * 40),
-                "# Number of statistics: {}".format(len(self.statistics)),
+                "# Number of statistics: {}".format(len(self.statistics.df)),
                 "# Preview:",
-                str(self.statistics.iloc[0 : self.top_n_preview]),
+                str(self.statistics.df.iloc[0 : self.top_n_preview]),
                 "{}".format("-" * 40),
-                "# Number of variables: {}".format(len(self.variables)),
+                "# Number of variables: {}".format(len(self.variables.df)),
                 "# Preview:",
-                str(self.variables.iloc[0 : self.top_n_preview]),
+                str(self.variables.df.iloc[0 : self.top_n_preview]),
                 "{}".format("-" * 40),
                 "# Info: Use object.tables, object.statistics or object.variables to get all results.",
                 "{}".format("-" * 40),
             ]
         )
+
+    @staticmethod
+    def _get_find_results(query: str, category: str, **kwargs) -> Results:
+        """
+        Based on the table name, table area and additional query parameters the
+        tablefile method from the data-endpoint will be queried.
+
+        Args:
+            table_name (str): Name of the table
+            table_area (str, optional): Area of the table (Defaul: all)
+            query_params (dict, optional): Additional query parameters
+            (Default: None)
+        Returns:
+            pd.DataFrame
+        """
+
+        kwargs = kwargs or {}
+
+        params = {
+            "term": query,
+            "category": category,
+        }
+
+        params |= kwargs
+
+        response = get_response_from_endpoint("find", "find", params)
+        response_json = response.json()[category.capitalize()]
+        resonse_df = pd.DataFrame(response_json).replace("\n", " ", regex=True)
+
+        return Results(resonse_df)
