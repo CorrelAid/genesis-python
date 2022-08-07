@@ -8,8 +8,11 @@ The config.ini holds all revelant information about the usage of GENESIS API lik
 If there is no config.ini in the given config_dir, a default config will be created with empty credentials.
 """
 import logging
+import os
+import shutil
 from configparser import ConfigParser
 from pathlib import Path
+from typing import Optional
 
 PKG_NAME = __name__.split(".", maxsplit=1)[0]
 
@@ -142,6 +145,54 @@ def _create_default_config() -> ConfigParser:
     }
 
     return config
+
+
+# TODO: Decide where this function should go... Maybe a feature of the new cache.py?
+def clean_cache(file: Optional[Path]) -> None:
+    """Clean the data cache by overall or specific file removal.
+
+    Args:
+        file (Path, optional): Path to the file which should be removed from cache directory.
+    """
+    config_file = get_config_path_from_settings()
+    config = _load_config(config_file)
+
+    # check for cache_dir in DATA section of the config.ini
+    if config.has_section("DATA"):
+        logger.info("Cache config %s was loaded successfully.", config_file)
+
+        if not config.get("DATA", "cache_dir") or not os.path.isdir(
+            config.get("DATA", "cache_dir")
+        ):
+            logger.critical(
+                "Cache directory not set and/or corrupted! "
+                "Please make sure to run init_config() and set up the data cache appropriately. "
+            )
+            raise KeyError(
+                "Issue with 'cache_dir' in the config.ini. Please rerun init_config()."
+            )
+
+    # load the folder path
+    cache_dir = config["DATA"]["cache_dir"]
+
+    # remove (previously specified) file(s) from the data cache
+    files = (
+        [os.path.join(cache_dir, file)]
+        if file is not None
+        else os.listdir(cache_dir)
+    )
+
+    for filename in files:
+        file_path = os.path.join(cache_dir, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print("Failed to delete %s. Reason: %s" % (file_path, e))
+
+    return None
 
 
 create_settings()
