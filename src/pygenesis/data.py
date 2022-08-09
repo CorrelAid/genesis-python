@@ -4,7 +4,7 @@ from typing import Literal
 import pandas as pd
 
 from pygenesis.cache import cache_data
-from pygenesis.cube import parse_cube, rename_axes
+from pygenesis.cube import get_cubefile_data
 from pygenesis.http_helper import get_response_from_endpoint
 from pygenesis.table import get_tablefile_data
 
@@ -44,15 +44,6 @@ def get_data(
     data = response.text
 
     if method == "tablefile":
-        return _get_tablefile_data(data)
+        return get_tablefile_data(data)
     else:
-        return _get_cubefile_data(data)
-
-
-def _get_cubefile_data(data: str) -> pd.DataFrame:
-    cube = rename_axes(parse_cube(data))
-    return cube["QEI"]
-
-
-def _get_tablefile_data(data: str) -> pd.DataFrame:
-    return get_tablefile_data(data)
+        return get_cubefile_data(data)

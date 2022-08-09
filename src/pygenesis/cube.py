@@ -4,7 +4,7 @@ import copy
 import pandas as pd
 
 
-def get_data(data: str) -> pd.DataFrame:
+def get_cubefile_data(data: str) -> pd.DataFrame:
     """Return cubefile data as pandas data frame.
 
     Args:
