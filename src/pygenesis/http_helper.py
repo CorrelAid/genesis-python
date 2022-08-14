@@ -82,6 +82,8 @@ def _check_destatis_status_code(destatis_status_code: int) -> None:
         Exception: Generic exception if the status code from destatis is equal
         to -1
     """
+    # TODO: add handling of status code 0 for success (to not overlook any random errors) - is status 0 always there - e.g. not contained in docu examples + jobs,...
+    # TODO: also, maybe take full dict as parameter & raise Exception with "Content" from status
     if destatis_status_code == -1:
         raise Exception(
             "Error: There is a system error.\
