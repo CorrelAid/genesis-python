@@ -1,4 +1,6 @@
 """Wrapper module for the data endpoint."""
+import warnings
+
 import requests
 
 from pygenesis.config import load_config
@@ -66,26 +68,46 @@ def _check_invalid_destatis_status_code(response: requests.Response) -> None:
         response_dict = response.json()
     except ValueError:
         return None
-    _check_destatis_status_code(response_dict.get("Status", {}).get("Code"))
+    _check_destatis_status(response_dict.get("Status", {}))
     return None
 
 
-def _check_destatis_status_code(destatis_status_code: int) -> None:
+def _check_destatis_status(destatis_status: dict) -> None:
     """
-    Helper method which checks the status code from destatis.
-    If the status code is not valid an exception will be raised.
+    Helper method which checks the status message from destatis.
+    If the status message is erroneous an exception will be raised.
+
+    Possible Codes (2.1.2 Grundstruktur der Responses):
+    - 0: "erfolgreich" (Type: "Information")
+    - 22: "erfolgreich mit Parameteranpassung" (Type: "Warnung")
+    - 104: "Kein passendes Objekt zu Suche" (Type: "Information")
 
     Args:
-        destatis_status_code (int): Status code from destatis
+        destatis_status (dict): Status response dict from destatis
 
     Raises:
         Exception: Generic exception if the status code from destatis is equal
         to -1
     """
-    # TODO: add handling of status code 0 for success (to not overlook any random errors) - is status 0 always there - e.g. not contained in docu examples + jobs,...
-    # TODO: also, maybe take full dict as parameter & raise Exception with "Content" from status
+    # -1 is a status code that according to the documentation should not occur
+    # and thus only is found if the status response dict is empty
+    destatis_status_code = destatis_status.get("Code", -1)
+    destatis_status_type = destatis_status.get("Type")
+    destatis_status_content = destatis_status.get("Content")
+
+    # check for generic/ system error
     if destatis_status_code == -1:
         raise Exception(
             "Error: There is a system error.\
                 Please check your query parameters."
         )
+
+    # check for destatis/ query errors
+    elif (destatis_status_code == 104) or (destatis_status_type == "Error"):
+        raise Exception(destatis_status_content)
+
+    # print warnings to user
+    elif (destatis_status_code == 22) or (destatis_status_type == "Warnung"):
+        warnings.warn(destatis_status_content, UserWarning, stacklevel=2)
+
+    return None
