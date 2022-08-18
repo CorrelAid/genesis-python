@@ -86,14 +86,16 @@ def _check_destatis_status(destatis_status: dict) -> None:
         destatis_status (dict): Status response dict from destatis
 
     Raises:
-        Exception: Generic exception if the status code from destatis is equal
-        to -1
+        Exception: Generic exception if the status code displays an error
     """
     # -1 is a status code that according to the documentation should not occur
     # and thus only is found if the status response dict is empty
     destatis_status_code = destatis_status.get("Code", -1)
     destatis_status_type = destatis_status.get("Type")
     destatis_status_content = destatis_status.get("Content")
+
+    error_en_de = ["Error", "Fehler"]
+    warning_en_de = ["Warning", "Warnung"]
 
     # check for generic/ system error
     if destatis_status_code == -1:
@@ -103,11 +105,13 @@ def _check_destatis_status(destatis_status: dict) -> None:
         )
 
     # check for destatis/ query errors
-    elif (destatis_status_code == 104) or (destatis_status_type == "Error"):
+    elif (destatis_status_code == 104) or (destatis_status_type in error_en_de):
         raise Exception(destatis_status_content)
 
     # print warnings to user
-    elif (destatis_status_code == 22) or (destatis_status_type == "Warnung"):
+    elif (destatis_status_code == 22) or (
+        destatis_status_type in warning_en_de
+    ):
         warnings.warn(destatis_status_content, UserWarning, stacklevel=2)
 
     return None
