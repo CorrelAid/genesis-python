@@ -36,6 +36,7 @@ def get_response_from_endpoint(
 
     _check_invalid_status_code(response.status_code)
     _check_invalid_destatis_status_code(response)
+
     return response
 
 
@@ -47,12 +48,14 @@ def _check_invalid_status_code(status_code: int) -> None:
         status_code (int): Status code from the response object
 
     Raises:
-        Exception: Generic exception if 401 is returned
+        Exception: Generic exception if status 4xx or 5xx is returned
     """
-    if (status_code // 100) == 4:
+    if (status_code // 100) in [4, 5]:
         raise Exception(
             f"Error {status_code}: The server returned a {status_code} status code"
         )
+
+    return None
 
 
 def _check_invalid_destatis_status_code(response: requests.Response) -> None:
@@ -69,6 +72,7 @@ def _check_invalid_destatis_status_code(response: requests.Response) -> None:
     except ValueError:
         return None
     _check_destatis_status(response_dict.get("Status", {}))
+
     return None
 
 
