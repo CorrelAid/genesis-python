@@ -12,7 +12,7 @@ def get_response_from_endpoint(
     endpoint: str, method: str, params: dict
 ) -> requests.Response:
     """
-    Wrapper method which constructs a url for querying data from destatis and
+    Wrapper method which constructs a url for querying data from Destatis and
     sends a GET request.
 
     Args:
@@ -21,9 +21,9 @@ def get_response_from_endpoint(
         params (dict): dictionary of query parameters
 
     Returns:
-        requests.Response: the response from destatis
+        requests.Response: the response from Destatis
     """
-    url = f"{config['GENESIS API']['base_url']}/{endpoint}/{method}"
+    url = f"{config['GENESIS API']['base_url']}{endpoint}/{method}"
 
     params |= {
         "username": config["GENESIS API"]["username"],
@@ -60,7 +60,7 @@ def _check_invalid_status_code(status_code: int) -> None:
 
 def _check_invalid_destatis_status_code(response: requests.Response) -> None:
     """
-    Helper method which handles the status code returned from destatis
+    Helper method which handles the status code returned from Destatis
     (if exists)
 
     Args:
@@ -78,7 +78,7 @@ def _check_invalid_destatis_status_code(response: requests.Response) -> None:
 
 def _check_destatis_status(destatis_status: dict) -> None:
     """
-    Helper method which checks the status message from destatis.
+    Helper method which checks the status message from Destatis.
     If the status message is erroneous an exception will be raised.
 
     Possible Codes (2.1.2 Grundstruktur der Responses):
@@ -87,7 +87,7 @@ def _check_destatis_status(destatis_status: dict) -> None:
     - 104: "Kein passendes Objekt zu Suche" (Type: "Information")
 
     Args:
-        destatis_status (dict): Status response dict from destatis
+        destatis_status (dict): Status response dict from Destatis
 
     Raises:
         Exception: Generic exception if the status code displays an error
