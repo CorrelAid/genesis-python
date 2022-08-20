@@ -1,12 +1,11 @@
 """Module provides functions to work with the GENESIS REST-API."""
-import requests
-
 from pygenesis.config import load_config
+from pygenesis.http_helper import get_response_from_endpoint
 
 config = load_config()
 
 
-def get_metadata(endpoint: str, name: str):
+def get_metadata(endpoint: str, name: str) -> str:
     """Method for downloading metadata from www-genesis.destatis.de.
 
     Method supports the following endpoints:
@@ -22,22 +21,16 @@ def get_metadata(endpoint: str, name: str):
         name (str): Unique name of the object.
 
     Returns:
-        dict: Content of "Object" response.
+        str: Content of "Object" response.
     """
-    url = f"{config['GENESIS API']['base_url']}metadata/{endpoint}"
-
     params = {
-        "username": config["GENESIS API"]["username"],
-        "password": config["GENESIS API"]["password"],
         "name": name,
     }
 
-    response = requests.request("GET", url, params=params, verify=False)
-
-    return response.json()
+    return get_response_from_endpoint("metadata", endpoint, params).text
 
 
-def get_catalogue(endpoint: str, params: dict):
+def get_catalogue(endpoint: str, params: dict) -> dict:
     """Method for downloading catalogue data from www-genesis.destatis.de.
 
     Args:
@@ -45,21 +38,13 @@ def get_catalogue(endpoint: str, params: dict):
         params (dict): The query parameter as defined by the API.
 
     Returns:
-        list: A list of hits in the catalog matching the query parameter.
+        dict: JSON formated response for the given query parameters.
     """
-    url = f"{config['GENESIS API']['base_url']}catalogue/{endpoint}"
 
-    params |= {
-        "username": config["GENESIS API"]["username"],
-        "password": config["GENESIS API"]["password"],
-    }
-
-    response = requests.request("GET", url, params=params, verify=False)
-
-    return response.json()
+    return get_response_from_endpoint("catalogue", endpoint, params).json()
 
 
-def get_cubefile(params: dict):
+def get_cubefile(params: dict) -> str:
     """Method for downloading cube files from www-genesis.destatis.de.
 
     Args:
@@ -68,13 +53,5 @@ def get_cubefile(params: dict):
     Returns:
         str: The content of the cubefile.
     """
-    url = f"{config['GENESIS API']['base_url']}data/cubefile"
 
-    params |= {
-        "username": config["GENESIS API"]["username"],
-        "password": config["GENESIS API"]["password"],
-    }
-
-    response = requests.request("GET", url, params=params, verify=False)
-
-    return response.text
+    return get_response_from_endpoint("data", "cubefile", params).text
