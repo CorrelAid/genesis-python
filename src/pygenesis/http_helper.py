@@ -48,12 +48,12 @@ def _check_invalid_status_code(status_code: int) -> None:
         status_code (int): Status code from the response object
 
     Raises:
-        Exception: Generic exception if status 4xx or 5xx is returned
+        AssertionError: Assert that status is not 4xx or 5xx
     """
-    if (status_code // 100) in [4, 5]:
-        raise Exception(
-            f"Error {status_code}: The server returned a {status_code} status code"
-        )
+    assert status_code // 100 not in [
+        4,
+        5,
+    ], f"Error {status_code}: The server returned a {status_code} status code"
 
     return None
 
@@ -73,13 +73,11 @@ def _check_invalid_destatis_status_code(response: requests.Response) -> None:
         return None
     _check_destatis_status(response_dict.get("Status", {}))
 
-    return None
-
 
 def _check_destatis_status(destatis_status: dict) -> None:
     """
     Helper method which checks the status message from Destatis.
-    If the status message is erroneous an exception will be raised.
+    If the status message is erroneous an error will be raised.
 
     Possible Codes (2.1.2 Grundstruktur der Responses):
     - 0: "erfolgreich" (Type: "Information")
@@ -90,10 +88,10 @@ def _check_destatis_status(destatis_status: dict) -> None:
         destatis_status (dict): Status response dict from Destatis
 
     Raises:
-        Exception: Generic exception if the status code displays an error
+        # TODO: Is this a Value or KeyError?
+        ValueError: If the status code or type displays an error (caused by the user inputs)
     """
-    # -1 is a status code that according to the documentation should not occur
-    # and thus only is found if the status response dict is empty
+    # -1 status code for unexpected errors and if no status code is given (faulty response)
     destatis_status_code = destatis_status.get("Code", -1)
     destatis_status_type = destatis_status.get("Type")
     destatis_status_content = destatis_status.get("Content")
@@ -103,14 +101,14 @@ def _check_destatis_status(destatis_status: dict) -> None:
 
     # check for generic/ system error
     if destatis_status_code == -1:
-        raise Exception(
+        raise ValueError(
             "Error: There is a system error.\
                 Please check your query parameters."
         )
 
     # check for destatis/ query errors
     elif (destatis_status_code == 104) or (destatis_status_type in error_en_de):
-        raise Exception(destatis_status_content)
+        raise ValueError(destatis_status_content)
 
     # print warnings to user
     elif (destatis_status_code == 22) or (
@@ -118,4 +116,5 @@ def _check_destatis_status(destatis_status: dict) -> None:
     ):
         warnings.warn(destatis_status_content, UserWarning, stacklevel=2)
 
-    return None
+    # TODO: pass response information to user, however logger.info might be overlooked
+    # as standard only shows beyond warning -> HowTo?

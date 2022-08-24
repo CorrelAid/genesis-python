@@ -18,7 +18,7 @@ def test__check_invalid_status_code_with_error():
     for _handle_status_code method.
     """
     for status_code in [400, 500]:
-        with pytest.raises(Exception) as e:
+        with pytest.raises(AssertionError) as e:
             _check_invalid_status_code(status_code)
         assert (
             str(e.value)
@@ -96,7 +96,7 @@ def test__check_invalid_destatis_status_code_with_error():
         # extract status content which is raised
         status_content = status.json().get("Status").get("Content")
 
-        with pytest.raises(Exception) as e:
+        with pytest.raises(ValueError) as e:
             _check_invalid_destatis_status_code(status)
         assert str(e.value) == status_content
 
