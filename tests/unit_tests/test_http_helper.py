@@ -75,7 +75,6 @@ def _generic_request_status(
 
     # TODO: Why is specific (UTF-8) encoding necessary?
     if status_response:
-
         request_status._content = json.dumps(status_dict).encode("utf-8")
     else:
         request_status._content = response_text.encode("utf-8")
