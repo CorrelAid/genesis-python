@@ -55,8 +55,6 @@ def _check_invalid_status_code(status_code: int) -> None:
         5,
     ], f"Error {status_code}: The server returned a {status_code} status code"
 
-    return None
-
 
 def _check_invalid_destatis_status_code(response: requests.Response) -> None:
     """
@@ -69,9 +67,15 @@ def _check_invalid_destatis_status_code(response: requests.Response) -> None:
     """
     try:
         response_dict = response.json()
-    except ValueError:
-        return None
-    _check_destatis_status(response_dict.get("Status", {}))
+    # catch possible errors raised by .json() (and only .json())
+    except (
+        UnicodeDecodeError,
+        requests.exceptions.JSONDecodeError,
+    ):
+        response_dict = None
+
+    if response_dict is not None:
+        _check_destatis_status(response_dict.get("Status", {}))
 
 
 def _check_destatis_status(destatis_status: dict) -> None:
