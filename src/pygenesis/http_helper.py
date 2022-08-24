@@ -1,4 +1,5 @@
 """Wrapper module for the data endpoint."""
+import json
 import warnings
 
 import requests
@@ -70,6 +71,7 @@ def _check_invalid_destatis_status_code(response: requests.Response) -> None:
     # catch possible errors raised by .json() (and only .json())
     except (
         UnicodeDecodeError,
+        json.decoder.JSONDecodeError,
         requests.exceptions.JSONDecodeError,
     ):
         response_dict = None
