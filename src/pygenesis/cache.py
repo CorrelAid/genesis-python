@@ -31,6 +31,7 @@ def cache_data(func: Callable) -> Callable:
                 cache_dir,
             )
 
+        # TODO: Is "name" general naming for data download (or is there other uses besides from get_data)?
         name = kwargs["name"]
         data_dir = cache_dir / name
         if data_dir.exists():
@@ -54,11 +55,12 @@ def cache_data(func: Callable) -> Callable:
 
 
 # TODO: Write test, use ID instead of file
-def clean_cache(file: Optional[Path]) -> None:
+def clean_cache(file: Optional[str]) -> None:
     """Clean the data cache by overall or specific file removal.
 
     Args:
-        file (Path, optional): Path to the file which should be removed from cache directory.
+        file (str, optional): file directory name of file which should be removed from
+        cache directory. Also compatible with specific file from file directory.
     """
     config = load_config()
 
@@ -72,16 +74,15 @@ def clean_cache(file: Optional[Path]) -> None:
             cache_dir,
         )
 
-    # remove (previously specified) file(s) from the data cache
-    files = [cache_dir / file] if file is not None else cache_dir.glob(file)
+    # remove specified file (directory) from the data cache or clear complete cache
+    file_path = (
+        cache_dir / cache_dir.glob(file) if file is not None else cache_dir
+    )
 
-    # TODO: remove complete tree according to ID file tree structure
-    for filename in files:
-        file_path = cache_dir / filename
-        try:
-            if file_path.is_file() or file_path.is_symlink():
-                file_path.unlink()
-            elif file_path.is_dir():
-                shutil.rmtree(file_path)
-        except (OSError, ValueError, FileNotFoundError) as e:
-            print(f"Failed to delete {file_path}. Reason: {e}")
+    try:
+        if file_path.is_file() or file_path.is_symlink():
+            file_path.unlink()
+        elif file_path.is_dir():
+            shutil.rmtree(file_path)
+    except (OSError, ValueError, FileNotFoundError) as e:
+        print(f"Failed to delete {file_path}. Reason: {e}")

@@ -73,11 +73,11 @@ def _generic_request_status(
     request_status = requests.Response()
     request_status.status_code = 200  # success
 
-    # TODO: Why is specific (UTF-8) encoding necessary?
+    # Define UTF-8 encoding as requests guesses otherwise
     if status_response:
-        request_status._content = json.dumps(status_dict).encode("utf-8")
+        request_status._content = json.dumps(status_dict).encode("UTF-8")
     else:
-        request_status._content = response_text.encode("utf-8")
+        request_status._content = response_text.encode("UTF-8")
 
     return request_status
 
@@ -111,7 +111,7 @@ def test__check_invalid_destatis_status_code_with_warning():
         _generic_request_status(status_type="Warnung"),
         _generic_request_status(status_type="Warning"),
     ]:
-        # TODO: Is the best/ most specific way to capture the warning?
+        # TODO: Is this the best/ most specific way to capture the warning?
         with pytest.warns(UserWarning):
             _check_invalid_destatis_status_code(status)
 
