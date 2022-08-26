@@ -33,6 +33,12 @@ def get_response_from_endpoint(
 
     response = requests.get(url, params=params)
 
+    # test auf 98
+    # + y/N
+    # + Anfrage /jobs
+    # + sleep
+    # + catalogue
+
     response.encoding = "UTF-8"
 
     _check_invalid_status_code(response.status_code)
