@@ -101,9 +101,9 @@ def _check_destatis_status(destatis_status: dict) -> None:
         ValueError: If the status code or type displays an error (caused by the user inputs)
     """
     # -1 status code for unexpected errors and if no status code is given (faulty response)
-    destatis_status_code = destatis_status.get("Code", -1)
-    destatis_status_type = destatis_status.get("Type")
-    destatis_status_content = destatis_status.get("Content")
+    destatis_status_code = int(destatis_status.get("Code", -1))
+    destatis_status_type = str(destatis_status.get("Type", "Information"))
+    destatis_status_content = str(destatis_status.get("Content"))
 
     # define status types
     error_en_de = ["Error", "Fehler"]

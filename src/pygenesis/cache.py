@@ -75,9 +75,8 @@ def clean_cache(file: Optional[str]) -> None:
         )
 
     # remove specified file (directory) from the data cache or clear complete cache
-    file_path = (
-        cache_dir / cache_dir.glob(file) if file is not None else cache_dir
-    )
+    # TODO: Find corresponding directories with cache_dir.glob(file)
+    file_path = cache_dir / file if file is not None else cache_dir
 
     try:
         if file_path.is_file() or file_path.is_symlink():
