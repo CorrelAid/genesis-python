@@ -51,10 +51,13 @@ def _check_invalid_status_code(status_code: int) -> None:
     Raises:
         AssertionError: Assert that status is not 4xx or 5xx
     """
-    assert status_code // 100 not in [
+    if status_code // 100 in [
         4,
         5,
-    ], f"Error {status_code}: The server returned a {status_code} status code"
+    ]:
+        raise AssertionError(
+            f"Error {status_code}: The server returned a {status_code} status code"
+        )
 
 
 def _check_invalid_destatis_status_code(response: requests.Response) -> None:
