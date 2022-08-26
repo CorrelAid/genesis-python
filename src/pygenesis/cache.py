@@ -83,6 +83,5 @@ def clean_cache(file: Optional[Path]) -> None:
                 file_path.unlink()
             elif file_path.is_dir():
                 shutil.rmtree(file_path)
-        # TODO: narrow down this exception
-        except Exception as e:
+        except (OSError, ValueError, FileNotFoundError) as e:
             print(f"Failed to delete {file_path}. Reason: {e}")
