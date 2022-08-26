@@ -102,6 +102,7 @@ def _check_destatis_status(destatis_status: dict) -> None:
     destatis_status_type = destatis_status.get("Type")
     destatis_status_content = destatis_status.get("Content")
 
+    # define status types
     error_en_de = ["Error", "Fehler"]
     warning_en_de = ["Warning", "Warnung"]
 
@@ -116,11 +117,13 @@ def _check_destatis_status(destatis_status: dict) -> None:
     elif (destatis_status_code == 104) or (destatis_status_type in error_en_de):
         raise ValueError(destatis_status_content)
 
-    # print warnings to user
+    # output warnings to user
     elif (destatis_status_code == 22) or (
         destatis_status_type in warning_en_de
     ):
         warnings.warn(destatis_status_content, UserWarning, stacklevel=2)
 
-    # TODO: pass response information to user, however logger.info might be overlooked
-    # as standard only shows beyond warning -> HowTo?
+    # output information to user
+    # TODO: Would logger.info (with forced visibility) be the better option?
+    elif destatis_status_type.lower() == "information":
+        print(f"Code {destatis_status_code}: {destatis_status_content}")
