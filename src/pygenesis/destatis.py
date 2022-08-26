@@ -1,11 +1,13 @@
 """Module provides functions to work with the GENESIS REST-API."""
+from typing import Any
+
 from pygenesis.config import load_config
 from pygenesis.http_helper import get_response_from_endpoint
 
 config = load_config()
 
 
-def get_metadata(endpoint: str, name: str) -> str:
+def get_metadata(endpoint: str, name: str) -> Any:
     """Method for downloading metadata from www-genesis.destatis.de.
 
     Method supports the following endpoints:
@@ -21,16 +23,16 @@ def get_metadata(endpoint: str, name: str) -> str:
         name (str): Unique name of the object.
 
     Returns:
-        str: Content of "Object" response.
+        Any: JSON formatted content of "Object" response.
     """
     params = {
         "name": name,
     }
 
-    return get_response_from_endpoint("metadata", endpoint, params).text
+    return get_response_from_endpoint("metadata", endpoint, params).json()
 
 
-def get_catalogue(endpoint: str, params: dict) -> dict:
+def get_catalogue(endpoint: str, params: dict) -> Any:
     """Method for downloading catalogue data from www-genesis.destatis.de.
 
     Args:
@@ -38,20 +40,20 @@ def get_catalogue(endpoint: str, params: dict) -> dict:
         params (dict): The query parameter as defined by the API.
 
     Returns:
-        dict: JSON formated response for the given query parameters.
+        Any: JSON formated response for the given query parameters.
     """
 
     return get_response_from_endpoint("catalogue", endpoint, params).json()
 
 
-def get_cubefile(params: dict) -> str:
+def get_cubefile(params: dict) -> Any:
     """Method for downloading cube files from www-genesis.destatis.de.
 
     Args:
         params (dict): The query parameter as defined by the API.
 
     Returns:
-        str: The content of the cubefile.
+        Any: The content of the cubefile.
     """
 
     return get_response_from_endpoint("data", "cubefile", params).text
