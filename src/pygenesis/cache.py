@@ -31,7 +31,8 @@ def cache_data(func: Callable) -> Callable:
                 cache_dir,
             )
 
-        # TODO: Is "name" generally in all subsequent methods (e.g. beyond get_data - or is only data meaningful to cache)?
+        # TODO: Is "name" generally in all subsequent methods
+        # (e.g. beyond get_data - or is only data meaningful to cache)?
         name = kwargs["name"]
         data_dir = cache_dir / name
         if data_dir.exists():
@@ -73,11 +74,10 @@ def clean_cache(file: Optional[str] = None) -> None:
             cache_dir,
         )
 
-    # remove specified file (directory) from the data cache or clear complete cache (remove childs, preserve base)
+    # remove specified file (directory) from the data cache
+    # or clear complete cache (remove childs, preserve base)
     file_paths = (
-        [cache_dir / file]
-        if file is not None
-        else [child for child in cache_dir.iterdir()]
+        [cache_dir / file] if file is not None else list(cache_dir.iterdir())
     )
 
     for file_path in file_paths:
