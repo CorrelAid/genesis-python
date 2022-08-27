@@ -1,12 +1,13 @@
 import time
 from datetime import date
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from pygenesis.cache import cache_data
+from pygenesis.cache import cache_data, clean_cache
 from pygenesis.config import (
     DEFAULT_SETTINGS_FILE,
     _write_config,
@@ -90,3 +91,38 @@ def test_cache_data_twice(cache_dir):
     load_time = time.perf_counter() - load_time
 
     assert load_time < SLEEP_TIME
+
+
+# TODO: double-check functionality of this test
+def clean_cache_setup(cache_dir, file: Optional[str] = None):
+    """
+    Convenience function to cache a file and remove it with different options.
+    """
+    init_config(cache_dir)
+
+    assert len(list((cache_dir / "data").glob("*"))) == 0
+
+    name = "test_clean_cache_decorator" if file is None else file
+    data = decorated_data(name=name)
+
+    assert isinstance(data, pd.DataFrame)
+    assert not data.empty
+
+    cached_data_file: Path = (
+        cache_dir
+        / "data"
+        / name
+        / str(date.today()).replace("-", "")
+        / f"{name}.xz"
+    )
+
+    assert cached_data_file.exists() and cached_data_file.is_file()
+
+    clean_cache(file=file)
+
+    assert not cached_data_file.exists() and not cached_data_file.is_file()
+
+
+def test_clean_cache(cache_dir):
+    clean_cache_setup(cache_dir)
+    clean_cache_setup(cache_dir, file="test_clean_cache_decorator_file")
