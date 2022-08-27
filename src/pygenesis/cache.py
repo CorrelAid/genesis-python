@@ -31,7 +31,7 @@ def cache_data(func: Callable) -> Callable:
                 cache_dir,
             )
 
-        # TODO: Is "name" general naming for data download (or is there other uses besides from get_data)?
+        # TODO: Is "name" generally in all subsequent methods (e.g. beyond get_data - or is only data meaningful to cache)?
         name = kwargs["name"]
         data_dir = cache_dir / name
         if data_dir.exists():
@@ -54,8 +54,7 @@ def cache_data(func: Callable) -> Callable:
     return wrapper_func
 
 
-# TODO: Write test, use ID instead of file
-def clean_cache(file: Optional[str]) -> None:
+def clean_cache(file: Optional[str] = None) -> None:
     """Clean the data cache by overall or specific file removal.
 
     Args:
@@ -74,14 +73,19 @@ def clean_cache(file: Optional[str]) -> None:
             cache_dir,
         )
 
-    # remove specified file (directory) from the data cache or clear complete cache
-    # TODO: Find corresponding directories with cache_dir.glob(file)
-    file_path = cache_dir / file if file is not None else cache_dir
+    # remove specified file (directory) from the data cache or clear complete cache (remove childs, preserve base)
+    file_paths = (
+        [cache_dir / file]
+        if file is not None
+        else [child for child in cache_dir.iterdir()]
+    )
 
-    try:
-        if file_path.is_file() or file_path.is_symlink():
-            file_path.unlink()
-        elif file_path.is_dir():
-            shutil.rmtree(file_path)
-    except (OSError, ValueError, FileNotFoundError) as e:
-        print(f"Failed to delete {file_path}. Reason: {e}")
+    for file_path in file_paths:
+        # delete if file or symlink, otherwise remove complete tree
+        try:
+            if file_path.is_file() or file_path.is_symlink():
+                file_path.unlink()
+            elif file_path.is_dir():
+                shutil.rmtree(file_path)
+        except (OSError, ValueError, FileNotFoundError) as e:
+            print(f"Failed to delete {file_path}. Reason: {e}")
