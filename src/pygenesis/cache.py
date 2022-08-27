@@ -1,4 +1,4 @@
-"""Module provides functions/decorators to cache downloaded data."""
+"""Module provides functions/decorators to cache downloaded data as well as remove cached data."""
 import logging
 import shutil
 from datetime import date
@@ -31,9 +31,13 @@ def cache_data(func: Callable) -> Callable:
                 cache_dir,
             )
 
-        # TODO: Is "name" generally in all subsequent methods
-        # (e.g. beyond get_data - or is only data meaningful to cache)?
-        name = kwargs["name"]
+        # get name specified, if None given do not cache data
+        name = kwargs.get("name", None)
+
+        if name is None:
+            data: pd.DateFrame = func(**kwargs)
+            return data
+
         data_dir = cache_dir / name
         if data_dir.exists():
             # TODO: Implement solution for updated data.
@@ -76,9 +80,7 @@ def clean_cache(file: Optional[str] = None) -> None:
 
     # remove specified file (directory) from the data cache
     # or clear complete cache (remove childs, preserve base)
-    file_paths = (
-        [cache_dir / file] if file is not None else list(cache_dir.iterdir())
-    )
+    file_paths = [cache_dir / file] if file is not None else cache_dir.iterdir()
 
     for file_path in file_paths:
         # delete if file or symlink, otherwise remove complete tree
@@ -88,4 +90,6 @@ def clean_cache(file: Optional[str] = None) -> None:
             elif file_path.is_dir():
                 shutil.rmtree(file_path)
         except (OSError, ValueError, FileNotFoundError) as e:
-            print(f"Failed to delete {file_path}. Reason: {e}")
+            logger.warning(f"Failed to delete {file_path}. Reason: {e}")
+
+        logger.info(f"Removed files: {file_paths}")
