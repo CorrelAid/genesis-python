@@ -1,9 +1,11 @@
 import json
+import logging
 
 import pytest
 import requests
 
-from src.pygenesis.http_helper import (
+from pygenesis.custom_exceptions import DestatisStatusError
+from pygenesis.http_helper import (
     _check_invalid_destatis_status_code,
     _check_invalid_status_code,
 )
@@ -18,7 +20,7 @@ def test__check_invalid_status_code_with_error():
     for _handle_status_code method.
     """
     for status_code in [400, 500]:
-        with pytest.raises(AssertionError) as e:
+        with pytest.raises(requests.exceptions.HTTPError) as e:
             _check_invalid_status_code(status_code)
         assert (
             str(e.value)
@@ -95,36 +97,46 @@ def test__check_invalid_destatis_status_code_with_error():
         # extract status content which is raised
         status_content = status.json().get("Status").get("Content")
 
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(DestatisStatusError) as e:
             _check_invalid_destatis_status_code(status)
         assert str(e.value) == status_content
 
 
-def test__check_invalid_destatis_status_code_with_warning():
+def test__check_invalid_destatis_status_code_with_warning(caplog):
     """
     Basic tests to check a warning status code as defined in the
     documentation via code (e.g. 22) or type ('Warning', 'Warnung').
     """
+    caplog.set_level(logging.WARNING)
 
     for status in [
         _generic_request_status(code=22),
         _generic_request_status(status_type="Warnung"),
         _generic_request_status(status_type="Warning"),
     ]:
-        # TODO: Is this the best/ most specific way to capture the warning?
-        with pytest.warns(UserWarning):
-            _check_invalid_destatis_status_code(status)
+        # extract status content which is contained in warning
+        status_content = status.json().get("Status").get("Content")
+
+        _check_invalid_destatis_status_code(status)
+
+        assert status_content in caplog.text
 
 
-def test__check_invalid_destatis_status_code_without_error():
+def test__check_invalid_destatis_status_code_without_error(caplog):
     """
     Basic tests to check the successful status code 0 or only text response as defined in the documentation.
     """
-    for status in [
-        _generic_request_status(),
-        _generic_request_status(status_response=False),
-    ]:
-        try:
-            _check_invalid_destatis_status_code(status)
-        except Exception:
-            assert False
+    # JSON response with status code
+    caplog.set_level(logging.INFO)
+    status = _generic_request_status()
+    status_content = status.json().get("Status").get("Content")
+    _check_invalid_destatis_status_code(status)
+
+    assert status_content in caplog.text
+
+    # text only response
+    status_text = _generic_request_status(status_response=False)
+    try:
+        _check_invalid_destatis_status_code(status_text)
+    except Exception:
+        assert False

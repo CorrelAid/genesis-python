@@ -1,12 +1,14 @@
 """Wrapper module for the data endpoint."""
 import json
-import warnings
+import logging
 
 import requests
 
 from pygenesis.config import load_config
+from pygenesis.custom_exceptions import DestatisStatusError
 
 config = load_config()
+logger = logging.getLogger(__name__)
 
 
 def get_response_from_endpoint(
@@ -51,11 +53,8 @@ def _check_invalid_status_code(status_code: int) -> None:
     Raises:
         AssertionError: Assert that status is not 4xx or 5xx
     """
-    if status_code // 100 in [
-        4,
-        5,
-    ]:
-        raise AssertionError(
+    if status_code // 100 in [4, 5]:
+        raise requests.exceptions.HTTPError(
             f"Error {status_code}: The server returned a {status_code} status code"
         )
 
@@ -97,13 +96,12 @@ def _check_destatis_status(destatis_status: dict) -> None:
         destatis_status (dict): Status response dict from Destatis
 
     Raises:
-        # TODO: Is this a Value or KeyError?
-        ValueError: If the status code or type displays an error (caused by the user inputs)
+        DestatisStatusError: If the status code or type displays an error (caused by the user inputs)
     """
     # -1 status code for unexpected errors and if no status code is given (faulty response)
-    destatis_status_code = int(destatis_status.get("Code", -1))
-    destatis_status_type = str(destatis_status.get("Type", "Information"))
-    destatis_status_content = str(destatis_status.get("Content"))
+    destatis_status_code = destatis_status.get("Code", -1)
+    destatis_status_type = destatis_status.get("Type", "Information")
+    destatis_status_content = destatis_status.get("Content")
 
     # define status types
     error_en_de = ["Error", "Fehler"]
@@ -111,22 +109,22 @@ def _check_destatis_status(destatis_status: dict) -> None:
 
     # check for generic/ system error
     if destatis_status_code == -1:
-        raise ValueError(
+        raise DestatisStatusError(
             "Error: There is a system error.\
                 Please check your query parameters."
         )
 
     # check for destatis/ query errors
     elif (destatis_status_code == 104) or (destatis_status_type in error_en_de):
-        raise ValueError(destatis_status_content)
+        raise DestatisStatusError(destatis_status_content)
 
     # output warnings to user
     elif (destatis_status_code == 22) or (
         destatis_status_type in warning_en_de
     ):
-        warnings.warn(destatis_status_content, UserWarning, stacklevel=2)
+        logger.warning(destatis_status_content)
 
     # output information to user
     # TODO: Would logger.info (with forced visibility) be the better option?
     elif destatis_status_type.lower() == "information":
-        print(f"Code {destatis_status_code}: {destatis_status_content}")
+        logger.info(f"Code {destatis_status_code}: {destatis_status_content}")
