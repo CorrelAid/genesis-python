@@ -127,4 +127,6 @@ def _check_destatis_status(destatis_status: dict) -> None:
     # output information to user
     # TODO: Would logger.info (with forced visibility) be the better option?
     elif destatis_status_type.lower() == "information":
-        logger.info(f"Code {destatis_status_code}: {destatis_status_content}")
+        logger.info(
+            "Code %d : %s", destatis_status_code, destatis_status_content
+        )
