@@ -90,6 +90,6 @@ def clean_cache(file: Optional[str] = None) -> None:
             elif file_path.is_dir():
                 shutil.rmtree(file_path)
         except (OSError, ValueError, FileNotFoundError) as e:
-            logger.warning(f"Failed to delete {file_path}. Reason: {e}")
+            logger.warning("Failed to delete %s. Reason: %s", file_path, e)
 
-        logger.info(f"Removed files: {file_paths}")
+        logger.info("Removed files: %s", file_paths)
