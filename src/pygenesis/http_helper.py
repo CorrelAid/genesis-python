@@ -99,7 +99,6 @@ def _check_destatis_status(destatis_status: dict) -> None:
     Raises:
         DestatisStatusError: If the status code or type displays an error (caused by the user inputs)
     """
-    print(destatis_status)
     # -1 status code for unexpected errors and if no status code is given (faulty response)
     destatis_status_code = destatis_status.get("Code", -1)
     destatis_status_type = destatis_status.get("Type", "Information")
