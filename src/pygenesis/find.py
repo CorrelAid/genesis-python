@@ -194,3 +194,10 @@ class Find:
         resonse_df = pd.DataFrame(response_json).replace("\n", " ", regex=True)
 
         return Results(resonse_df, category)
+
+
+if __name__ == "__main__":
+    results = Find("Rohöl")
+    results.tables.get_code([1, 2, 3])
+    results.tables.get_metadata([1, 2])
+    results.cubes.get_metadata([1, 2])
