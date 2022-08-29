@@ -82,7 +82,7 @@ def get_cubefile(query_params: dict):
     return response.text
 
 
-def get_find(query_params: dict) -> list:
+def get_find(query_params: dict) -> object:
     """Method for downloading find data from www-genesis.destatis.de.
 
     Args:
