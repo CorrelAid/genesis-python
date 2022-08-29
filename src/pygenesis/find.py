@@ -1,3 +1,5 @@
+"""Implements find endpoint to retrieve results based on query"""
+
 import pandas as pd
 
 from pygenesis.http_helper import get_response_from_endpoint
@@ -7,15 +9,27 @@ pd.set_option("expand_frame_repr", False)
 
 
 class Results:
-    def __init__(self, results: pd.DataFrame, category: str):
-        """Class that contains the results of a find query.
+    """
+    A class representing the result object of variables, statistics, cubes and tables.
+
+    Attributes:
+        df (pd.DataFrame): The DataFrame that contains the data.
+        category (str): Category of the result. E.g. "tables", "cubes".
+
+    Methods:
+        get_code(): Gets code based on the index of the object.
+        get_metadata(): Gets metadata based on the index of the object.
+    """
+
+    def __init__(self, result: pd.DataFrame, category: str):
+        """
+        Class that contains the results of a find query.
 
         Args:
             DataFrame (pd.DataFrame): Result of a search query.
             category (str): Category of the result. E.g. "tables", "cubes"
         """
-
-        self.df = results
+        self.df = result
         self.category = category
 
     def __repr__(self):
@@ -25,7 +39,10 @@ class Results:
         return self.df.to_markdown()
 
     def __len__(self):
-        len(self.df)
+        if len(self.df) > 0:
+            return len(self.df)
+        else:
+            return 0
 
     def get_code(self, index: list):
         """
@@ -155,6 +172,18 @@ class Results:
 
 
 class Find:
+    """
+    A class representing the find object that includes Result objects for variables, statistics, cubes and tables.
+
+    Attributes:
+        query (str): The query that is provided to find endpoint.
+        top_n_preview (int): Number of previews in print summary.
+
+    Methods:
+        _print_summary(): Prints a summary with result previews.
+        _get_find_results(): Gets results from the find endpoints.
+    """
+
     def __init__(self, query: str, top_n_preview: int = 5) -> None:
         """Method for retrieving data from find endpoint.
 
