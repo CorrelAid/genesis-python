@@ -62,7 +62,7 @@ class Results:
                         f"{self.category.upper()} {code} - {ix}",
                         "Name:",
                         structure_dict["Head"]["Content"],
-                        "{}".format("-" * 20),
+                        f"{'-' * 20}",
                         "Columns:",
                         "\n".join(
                             [
@@ -70,12 +70,12 @@ class Results:
                                 for col in structure_dict["Columns"]
                             ]
                         ),
-                        "{}".format("-" * 20),
+                        f"{'-' * 20}",
                         "Rows:",
                         "\n".join(
                             [row["Content"] for row in structure_dict["Rows"]]
                         ),
-                        "{}".format("-" * 40),
+                        f"{'-' * 40}",
                     ]
                 )
 
@@ -87,12 +87,12 @@ class Results:
                         f"{self.category.upper()} {code} - {ix}",
                         "Name:",
                         response["Object"]["Content"],
-                        "{}".format("-" * 20),
+                        f"{'-' * 20}",
                         "Content:",
                         "\n".join(
                             [content["Content"] for content in axis_dict]
                         ),
-                        "{}".format("-" * 40),
+                        f"{'-' * 40}",
                     ]
                 )
 
@@ -104,7 +104,7 @@ class Results:
                         f"{self.category.upper()} {code} - {ix}",
                         "Name:",
                         response["Object"]["Content"],
-                        "{}".format("-" * 20),
+                        f"{'-' * 20}",
                         "Content:",
                         "\n".join(
                             [
@@ -112,7 +112,7 @@ class Results:
                                 for content in ["Cubes", "Variables", "Updated"]
                             ]
                         ),
-                        "{}".format("-" * 40),
+                        f"{'-' * 40}",
                     ]
                 )
 
@@ -124,10 +124,10 @@ class Results:
                         f"{self.category.upper()} {code} - {ix}",
                         "Name:",
                         object_dict["Content"],
-                        "{}".format("-" * 20),
+                        f"{'-' * 20}",
                         "Information:",
                         str(object_dict["Information"]),
-                        "{}".format("-" * 40),
+                        f"{'-' * 40}",
                     ]
                 )
 
@@ -182,25 +182,25 @@ class Find:
         return "\n".join(
             [
                 "##### Results #####",
-                "{}".format("-" * 40),
-                "# Number of tables: {}".format(len(self.tables.df)),
+                f"{'-' * 40}",
+                f"# Number of tables: {len(self.tables.df)}",
                 "# Preview:",
                 self.tables.df.iloc[0 : self.top_n_preview].to_markdown(),
-                "{}".format("-" * 40),
-                "# Number of statistics: {}".format(len(self.statistics.df)),
+                f"{'-' * 40}"
+                f"# Number of statistics: {len(self.statistics.df)}",
                 "# Preview:",
                 self.statistics.df.iloc[0 : self.top_n_preview].to_markdown(),
-                "{}".format("-" * 40),
-                "# Number of variables: {}".format(len(self.variables.df)),
+                f"{'-' * 40}",
+                f"# Number of variables: {len(self.variables.df)}",
                 "# Preview:",
                 self.variables.df.iloc[0 : self.top_n_preview].to_markdown(),
-                "{}".format("-" * 40),
-                "# Number of cubes: {}".format(len(self.cubes.df)),
+                f"{'-' * 40}",
+                f"# Number of cubes: {len(self.cubes.df)}",
                 "# Preview:",
                 self.cubes.df.iloc[0 : self.top_n_preview].to_markdown(),
-                "{}".format("-" * 40),
+                f"{'-' * 40}",
                 "# Info: Use object.tables, object.statistics, object.variables or object.cubes to get all results.",
-                "{}".format("-" * 40),
+                f"{'-' * 40}",
             ]
         )
 
@@ -228,6 +228,13 @@ class Find:
 
         response = get_response_from_endpoint("find", "find", params)
         response_json = response.json()[category.capitalize()]
-        resonse_df = pd.DataFrame(response_json).replace("\n", " ", regex=True)
+        response_df = pd.DataFrame(response_json).replace("\n", " ", regex=True)
 
-        return Results(resonse_df, category)
+        return Results(response_df, category)
+
+
+if __name__ == "__main__":
+    results = Find("Rohöl")
+    results.tables.get_code([1, 2, 3])
+    results.tables.get_metadata([1, 2])
+    results.cubes.get_metadata([1, 2])
