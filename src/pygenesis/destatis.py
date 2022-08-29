@@ -92,7 +92,7 @@ def get_find(query_params: dict) -> list:
     Returns:
         list: A list of hits matching the query parameter.
     """
-    url = f"https://www-genesis.destatis.de/genesisWS/rest/2020/find/find"
+    url = "https://www-genesis.destatis.de/genesisWS/rest/2020/find/find"
 
     params = {
         "username": config["PYGENESIS_USERNAME"],
