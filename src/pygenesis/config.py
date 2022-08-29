@@ -77,6 +77,10 @@ def init_config(config_dir: Path = DEFAULT_CONFIG_DIR) -> None:
     config = _create_default_config()
     _write_config(config, config_file)
 
+    cache_dir = Path(config["DATA"]["cache_dir"])
+    if not cache_dir.exists():
+        cache_dir.mkdir()
+
     logger.info("New config was created. Path: %s.", config_file)
 
 
