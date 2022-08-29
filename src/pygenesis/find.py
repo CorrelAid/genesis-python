@@ -79,8 +79,6 @@ class Results:
                     ]
                 )
 
-                print(output)
-
             elif self.category == "cubes":
                 axis_dict = response["Object"]["Structure"]["Axis"]
 
@@ -98,7 +96,42 @@ class Results:
                     ]
                 )
 
-                print(output)
+            elif self.category == "statistics":
+                structure_dict = response["Object"]
+
+                output = "\n".join(
+                    [
+                        f"{self.category.upper()} {code} - {ix}",
+                        "Name:",
+                        response["Object"]["Content"],
+                        "{}".format("-" * 20),
+                        "Content:",
+                        "\n".join(
+                            [
+                                f"{structure_dict[content]} {content}"
+                                for content in ["Cubes", "Variables", "Updated"]
+                            ]
+                        ),
+                        "{}".format("-" * 40),
+                    ]
+                )
+
+            elif self.category == "variables":
+                object_dict = response["Object"]
+
+                output = "\n".join(
+                    [
+                        f"{self.category.upper()} {code} - {ix}",
+                        "Name:",
+                        object_dict["Content"],
+                        "{}".format("-" * 20),
+                        "Information:",
+                        str(object_dict["Information"]),
+                        "{}".format("-" * 40),
+                    ]
+                )
+
+            print(output)
 
     @staticmethod
     def _get_metadata_results(category: str, code: str):
@@ -162,7 +195,11 @@ class Find:
                 "# Preview:",
                 self.variables.df.iloc[0 : self.top_n_preview].to_markdown(),
                 "{}".format("-" * 40),
-                "# Info: Use object.tables, object.statistics or object.variables to get all results.",
+                "# Number of cubes: {}".format(len(self.cubes.df)),
+                "# Preview:",
+                self.cubes.df.iloc[0 : self.top_n_preview].to_markdown(),
+                "{}".format("-" * 40),
+                "# Info: Use object.tables, object.statistics, object.variables or object.cubes to get all results.",
                 "{}".format("-" * 40),
             ]
         )
@@ -194,10 +231,3 @@ class Find:
         resonse_df = pd.DataFrame(response_json).replace("\n", " ", regex=True)
 
         return Results(resonse_df, category)
-
-
-if __name__ == "__main__":
-    results = Find("Rohöl")
-    results.tables.get_code([1, 2, 3])
-    results.tables.get_metadata([1, 2])
-    results.cubes.get_metadata([1, 2])
