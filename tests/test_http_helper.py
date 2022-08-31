@@ -1,6 +1,6 @@
 import pytest
 
-from src.pygenesis.http_helper import _check_invalid_status_code
+from pygenesis.http_helper import _check_invalid_status_code
 
 
 def test__check_invalid_status_code_with_error():

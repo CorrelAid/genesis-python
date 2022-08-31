@@ -13,7 +13,7 @@ def get_cubefile_data(data: str) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Parsed cube file.
     """
-    cube = rename_axes(parse_cube(data))
+    cube = assign_correct_types(rename_axes(parse_cube(data)))
 
     return cube["QEI"]
 
@@ -29,7 +29,7 @@ def parse_cube(data: str) -> dict:
     """
     cube = {}
     header = None
-    data_block: list[pd.DataFrame] = []
+    data_block: list[str] = []
 
     for line in data.splitlines():
         # skip all rows until first header
@@ -49,6 +49,12 @@ def parse_cube(data: str) -> dict:
         data_block.append(line_content)
 
     # the last data block has no header after it so we have to do it here
+    # for cubes with more than one variable in DQI, we have to repeat the last four columns
+    last_four_columns = header[-4:]
+    header = header[:-4]
+    for var in cube["DQI"]["NAME"]:
+        header.extend([f"{var}_{col}" for col in last_four_columns])
+
     cube[header_type] = pd.DataFrame(data_block, columns=header)
 
     return cube
@@ -58,7 +64,6 @@ def rename_axes(
     cube: dict,
     rename_classifying_variables: bool = True,
     rename_time_variable: bool = True,
-    rename_value_variables: bool = True,
 ) -> dict:
     """Rename the generic axes of a cubefile with the names found in the metadata.
 
@@ -68,11 +73,9 @@ def rename_axes(
             Defaults to True.
         rename_time_variable (bool, optional): If True, rename the time variable.
             Defaults to True.
-        rename_value_variables (bool, optional): If True, rename the value variables.
-            Defaults to True.
 
     Returns:
-        dict: _description_
+        dict: Same dict as cube but with renamed axes for QEI.
     """
     cube = copy.deepcopy(cube)
 
@@ -89,13 +92,34 @@ def rename_axes(
         old_cols.append("ZI-WERT")
         new_cols.extend(cube["DQZ"]["NAME"].to_list())
 
-    if rename_value_variables:
-        old_cols.extend(
-            [col for col in cube["QEI"].columns if col.startswith("WERT")]
-        )
-        new_cols.extend(cube["DQI"]["NAME"].to_list())
-
     cube["QEI"].rename(columns=dict(zip(old_cols, new_cols)), inplace=True)
+
+    return cube
+
+
+def assign_correct_types(cube: dict) -> dict:
+    """Assign correct value types to column 'WERT'.
+
+    Args:
+        cube (dict): A dictionary holding the cube data as returned by `parse_cube()`.
+
+    Returns:
+        dict: Same dict as cube but with changed column types for QEI.
+    """
+    cube = copy.deepcopy(cube)
+
+    for var, dtype in zip(cube["DQI"]["NAME"], cube["DQI"]["DST"]):
+        if dtype == "GANZ":
+            cast_type = int
+        elif dtype == "FEST":
+            cast_type = float
+        else:
+            cast_type = None
+
+        if cast_type is not None:
+            cube["QEI"].loc[:, f"{var}_WERT"] = (
+                cube["QEI"].loc[:, f"{var}_WERT"].astype(cast_type)
+            )
 
     return cube
 
