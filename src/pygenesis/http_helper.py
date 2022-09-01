@@ -1,5 +1,6 @@
 """Wrapper module for the data endpoint."""
 import json
+import time
 import warnings
 
 import requests
@@ -33,11 +34,15 @@ def get_response_from_endpoint(
 
     response = requests.get(url, params=params)
 
-    # test auf 98
-    # + y/N
-    # + Anfrage /jobs
-    # + sleep
-    # + catalogue
+    # jobs Funktion
+    try:
+        response_status_code = response.json().get("Status").get("Code", -1)
+        if response_status_code == 98:
+            response = _jobs_process(
+                response_status_code, params, endpoint, method
+            )
+    except json.decoder.JSONDecodeError:
+        pass
 
     response.encoding = "UTF-8"
 
@@ -45,6 +50,68 @@ def get_response_from_endpoint(
     _check_invalid_destatis_status_code(response)
 
     return response
+
+
+def _jobs_process(
+    response_status_code: int, params: dict, endpoint: str, method: str
+) -> None:
+    """
+    Helper method which handles too large data requests with option of starting a job
+
+    Args:
+        response_status_code (int): Status code from the response object with job
+    """
+    positive = ["ja", "j", "y", "yes"]
+    negative = ["nein", "n", "no"]
+
+    job_bool = ""
+    while job_bool.lower() not in positive + negative:
+        job_bool = input(
+            "Die Daten sind zu groß um direkt abgerufen zu werden. Es muss ein Job gestartet werden, "
+            "der wenige Sekunden braucht, um die Daten abzurufen."
+            "Sollen wir einen Job für Sie starten?"
+            "\n Ja/Nein:"
+        )
+    if job_bool.lower() in positive:
+        params |= {"job": "true"}
+        response = get_response_from_endpoint(endpoint, method, params)
+        job_true_response = response.json()
+        if job_true_response.get("Status").get("Code") == 99:
+            s = job_true_response.get("Status").get("Content")
+            job_ID = s.split(":")[1].strip()
+            print(f"Der Job wurde angestoßen mit der ID: {job_ID}")
+
+        params |= {"sortcriterion": "time"}
+        catalogue_state = None
+        timeout = time.time() + 90
+        while (
+            catalogue_state not in ["Fertig", "finished"]
+            and time.time() < timeout
+        ):
+            catalogue_response = get_response_from_endpoint(
+                "catalogue", "jobs?", params
+            )
+            if catalogue_response.json().get("List")[-1].get("Code") == job_ID:
+                catalogue_state = (
+                    catalogue_response.json().get("List")[-1].get("State")
+                )
+            else:
+                # find the correct job in list
+                pass
+            time.sleep(20)
+            print(
+                f"Der Endpunkt catalogue/jobs wurde mit der ID {job_ID} angesprochen. Der Status ist: {catalogue_state}"
+            )
+        if catalogue_state in ["Fertig", "finished"]:
+            params_resultfile = {
+                "name": job_ID,
+                "area": "all",
+                "language": "de",
+            }
+            result = get_response_from_endpoint(
+                "data", "resultfile?", params_resultfile
+            )
+            return result
 
 
 def _check_invalid_status_code(status_code: int) -> None:
