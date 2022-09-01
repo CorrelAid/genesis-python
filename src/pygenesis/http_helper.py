@@ -1,9 +1,14 @@
 """Wrapper module for the data endpoint."""
+from typing import Literal
+
 import requests
 
+from pygenesis.cache import cache_data
 from pygenesis.config import load_config
 
 config = load_config()
+
+METHODS = Literal["tablefile", "cubefile"]
 
 
 def get_response_from_endpoint(

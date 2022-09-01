@@ -1,16 +1,27 @@
 """Module contains business logic related to destatis tables."""
+from io import StringIO
+
 import pandas as pd
 
-from pygenesis.csv_helper import get_df_from_text
+from pygenesis.http_helper import get_response_from_endpoint
 
 
-def get_tablefile_data(data: str) -> pd.DataFrame:
-    """Return table file data as pandas data frame.
+class Table:
+    def __init__(self, name: str):
+        self.name = name
+        self.raw_data = ""
+        self.data = pd.DataFrame()
+        self.metadata = {}
 
-    Args:
-        data (str): Raw tablefile content.
+    def get_data(self, area: str = "all", **kwargs):
+        params = {"name": self.name, "area": area, "format": "ffcsv"}
 
-    Returns:
-        pd.DataFrame: Parsed table file.
-    """
-    return get_df_from_text(data)
+        params |= kwargs
+
+        response = get_response_from_endpoint("data", "tablefile", params)
+        self.raw_data = response.text
+        data_str = StringIO(self.raw_data)
+        self.data = pd.read_csv(data_str, sep=";")
+
+        response = get_response_from_endpoint("metadata", "table", params)
+        self.metadata = response.json()

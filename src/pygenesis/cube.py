@@ -3,19 +3,29 @@ import copy
 
 import pandas as pd
 
+from pygenesis.http_helper import get_response_from_endpoint
 
-def get_cubefile_data(data: str) -> pd.DataFrame:
-    """Return cubefile data as pandas data frame.
 
-    Args:
-        data (str): Raw cubefile content.
+class Cube:
+    def __init__(self, name: str):
+        self.name = name
+        self.raw_data = ""
+        self.data = pd.DataFrame()
+        self.cube = {}
+        self.metadata = {}
 
-    Returns:
-        pd.DataFrame: Parsed cube file.
-    """
-    cube = assign_correct_types(rename_axes(parse_cube(data)))
+    def get_data(self, area: str = "all", **kwargs):
+        params = {"name": self.name, "area": area}
 
-    return cube["QEI"]
+        params |= kwargs
+
+        response = get_response_from_endpoint("data", "cubefile", params)
+        self.raw_data = response.text
+        self.cube = assign_correct_types(rename_axes(parse_cube(self.raw_data)))
+        self.data = self.cube["QEI"]
+
+        response = get_response_from_endpoint("metadata", "cube", params)
+        self.metadata = response.json()
 
 
 def parse_cube(data: str) -> dict:
