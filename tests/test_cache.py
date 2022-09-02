@@ -1,12 +1,12 @@
 import time
+import zipfile
 from datetime import date
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pytest
 
-from pygenesis.cache import cache_data
+from pygenesis.cache import cache_data_from_response
 from pygenesis.config import (
     DEFAULT_SETTINGS_FILE,
     _write_config,
@@ -29,12 +29,10 @@ def restore_settings():
     _write_config(old_settings, DEFAULT_SETTINGS_FILE)
 
 
-@cache_data
-def decorated_data(*, name):
+@cache_data_from_response
+def decorated_data(*, endpoint, method, params):
     time.sleep(SLEEP_TIME)
-    return pd.DataFrame(
-        np.random.random(size=(10, 5)), columns=["a", "b", "c", "d", "e"]
-    )
+    return "test data"
 
 
 def test_cache_data_wrapper(cache_dir):
@@ -42,17 +40,18 @@ def test_cache_data_wrapper(cache_dir):
 
     assert len(list((cache_dir / "data").glob("*"))) == 0
 
-    data = decorated_data(name="test_cache_decorator")
+    data = decorated_data(
+        endpoint="data", method="test", params={"name": "test_cache_decorator"}
+    )
 
-    assert isinstance(data, pd.DataFrame)
-    assert not data.empty
+    assert isinstance(data, str)
+    assert len(data) > 0
 
     cached_data_file: Path = (
         cache_dir
         / "data"
         / "test_cache_decorator"
-        / str(date.today()).replace("-", "")
-        / "test_cache_decorator.xz"
+        / (str(date.today()).replace("-", "") + "_" + "data_test.zip")
     )
 
     assert cached_data_file.exists() and cached_data_file.is_file()
@@ -69,24 +68,30 @@ def test_cache_data_wrapper(cache_dir):
     ]
 
     assert len(objs_in_name_dir) == 1
-    assert objs_in_name_dir[0] == cached_data_file.parent
+    assert objs_in_name_dir[0] == cached_data_file
 
-    restored_data = pd.read_csv(cached_data_file)
+    with zipfile.ZipFile(cached_data_file, "r") as myzip:
+        with myzip.open(cached_data_file.name.replace(".zip", ".txt")) as file:
+            restored_data = file.read().decode()
 
-    pd.testing.assert_frame_equal(data, restored_data, check_index_type=False)
+    assert restored_data == data
 
 
 def test_cache_data_twice(cache_dir):
     init_config(cache_dir)
 
     load_time = time.perf_counter()
-    data = decorated_data(name="test_cache_decorator")
+    data = decorated_data(
+        endpoint="data", method="test", params={"name": "test_cache_decorator"}
+    )
     load_time = time.perf_counter() - load_time
 
     assert load_time >= SLEEP_TIME
 
     load_time = time.perf_counter()
-    data = decorated_data(name="test_cache_decorator")
+    data = decorated_data(
+        endpoint="data", method="test", params={"name": "test_cache_decorator"}
+    )
     load_time = time.perf_counter() - load_time
 
     assert load_time < SLEEP_TIME

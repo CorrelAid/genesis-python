@@ -1,9 +1,10 @@
 """Module provides functionality to parse cubefile data provided by GENESIS."""
 import copy
+import json
 
 import pandas as pd
 
-from pygenesis.http_helper import get_response_from_endpoint
+from pygenesis.http_helper import get_data_from_endpoint
 
 
 class Cube:
@@ -19,13 +20,17 @@ class Cube:
 
         params |= kwargs
 
-        response = get_response_from_endpoint("data", "cubefile", params)
-        self.raw_data = response.text
-        self.cube = assign_correct_types(rename_axes(parse_cube(self.raw_data)))
+        raw_data = get_data_from_endpoint(
+            endpoint="data", method="cubefile", params=params
+        )
+        self.raw_data = raw_data
+        self.cube = assign_correct_types(rename_axes(parse_cube(raw_data)))
         self.data = self.cube["QEI"]
 
-        response = get_response_from_endpoint("metadata", "cube", params)
-        self.metadata = response.json()
+        raw_data = get_data_from_endpoint(
+            endpoint="metadata", method="cube", params=params
+        )
+        self.metadata = json.loads(raw_data)
 
 
 def parse_cube(data: str) -> dict:
