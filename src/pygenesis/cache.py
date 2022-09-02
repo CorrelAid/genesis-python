@@ -61,7 +61,10 @@ def cache_data_from_response(func: Callable) -> Callable:
                 file.write(data)
 
             with zipfile.ZipFile(
-                str(file_path).replace(".txt", ".zip"), "w"
+                str(file_path).replace(".txt", ".zip"),
+                "w",
+                compression=zipfile.ZIP_DEFLATED,
+                compresslevel=9,
             ) as myzip:
                 myzip.write(file_path, arcname=file_name)
 
