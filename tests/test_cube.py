@@ -1,4 +1,5 @@
 import zipfile
+from os import rename
 from pathlib import Path
 
 import pytest
@@ -7,21 +8,39 @@ from pygenesis.cube import Cube, assign_correct_types, parse_cube, rename_axes
 
 
 @pytest.fixture
-def easy_cube():
+def easy_raw_data():
     with zipfile.ZipFile(Path(__file__).parent / "rsc" / "data.zip") as myzip:
         with myzip.open("12411BJ001.txt", "r") as file:
             return file.read().decode()
 
 
 @pytest.fixture
-def hard_cube():
+def hard_raw_data():
     with zipfile.ZipFile(Path(__file__).parent / "rsc" / "data.zip") as myzip:
         with myzip.open("22922KJ1141.txt", "r") as file:
             return file.read().decode()
 
 
 @pytest.fixture
-def raw_data(request, easy_cube, hard_cube):
+def easy_cube(easy_raw_data):
+    return parse_cube(easy_raw_data)
+
+
+@pytest.fixture
+def hard_cube(hard_raw_data):
+    return parse_cube(hard_raw_data)
+
+
+@pytest.fixture
+def raw_data(request, easy_raw_data, hard_raw_data):
+    if request.param == "easy_cube":
+        return easy_raw_data
+    elif request.param == "hard_cube":
+        return hard_raw_data
+
+
+@pytest.fixture
+def cube(request, easy_cube, hard_cube):
     if request.param == "easy_cube":
         return easy_cube
     elif request.param == "hard_cube":
@@ -72,3 +91,48 @@ def test_parse_cube(
     assert cube["DQA"]["NAME"].to_list() == expected_DQA
     assert cube["DQZ"]["NAME"].values[0] == expected_DQZ
     assert cube["DQI"]["NAME"].to_list() == expected_DQI
+
+
+@pytest.mark.parametrize(
+    "cube, expected_names",
+    [
+        (
+            "easy_cube",
+            [
+                "DINSG",
+                "NAT",
+                "GES",
+                "FAMST8",
+                "ALT013",
+                "STAG",
+                "BEVSTD_WERT",
+                "BEVSTD_QUALITAET",
+                "BEVSTD_GESPERRT",
+                "BEVSTD_WERT-VERFAELSCHT",
+            ],
+        ),
+        (
+            "hard_cube",
+            [
+                "KREISE",
+                "GES",
+                "ERW122",
+                "ELGAT2",
+                "JAHR",
+                "ELG002_WERT",
+                "ELG002_QUALITAET",
+                "ELG002_GESPERRT",
+                "ELG002_WERT-VERFAELSCHT",
+                "ELG003_WERT",
+                "ELG003_QUALITAET",
+                "ELG003_GESPERRT",
+                "ELG003_WERT-VERFAELSCHT",
+            ],
+        ),
+    ],
+    indirect=["cube"],
+)
+def test_rename_axes(cube, expected_names):
+    cube = rename_axes(cube)
+
+    assert list(cube["QEI"].columns) == expected_names
