@@ -14,7 +14,7 @@ from pygenesis.config import (
     load_settings,
 )
 
-SLEEP_TIME = 0.1
+SLEEP_TIME = 0.2
 
 
 @pytest.fixture()
