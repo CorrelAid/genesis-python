@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pygenesis.cube import Cube, assign_correct_types, parse_cube, rename_axes
+from pygenesis.cube import assign_correct_types, parse_cube, rename_axes
 
 
 @pytest.fixture
