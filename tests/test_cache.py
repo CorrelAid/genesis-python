@@ -1,9 +1,8 @@
-import time
+import logging
 import zipfile
 from datetime import date
 from pathlib import Path
 
-import pandas as pd
 import pytest
 
 from pygenesis.cache import cache_data_from_response
@@ -14,7 +13,7 @@ from pygenesis.config import (
     load_settings,
 )
 
-SLEEP_TIME = 0.2
+SLEEP_TIME = 0.1
 
 
 @pytest.fixture()
@@ -31,7 +30,6 @@ def restore_settings():
 
 @cache_data_from_response
 def decorated_data(*, endpoint, method, params):
-    time.sleep(SLEEP_TIME)
     return "test data"
 
 
@@ -77,21 +75,25 @@ def test_cache_data_wrapper(cache_dir):
     assert restored_data == data
 
 
-def test_cache_data_twice(cache_dir):
+def test_cache_data_twice(cache_dir, caplog):
     init_config(cache_dir)
 
-    load_time = time.perf_counter()
-    data = decorated_data(
-        endpoint="data", method="test", params={"name": "test_cache_decorator"}
-    )
-    load_time = time.perf_counter() - load_time
+    with caplog.at_level(logging.INFO):
+        _ = decorated_data(
+            endpoint="data",
+            method="test",
+            params={"name": "test_cache_decorator"},
+        )
 
-    assert load_time >= SLEEP_TIME
+        assert "Data was successfully cached under" in caplog.text
 
-    load_time = time.perf_counter()
-    data = decorated_data(
-        endpoint="data", method="test", params={"name": "test_cache_decorator"}
-    )
-    load_time = time.perf_counter() - load_time
+    caplog.clear()
 
-    assert load_time < SLEEP_TIME
+    with caplog.at_level(logging.INFO):
+        _ = decorated_data(
+            endpoint="data",
+            method="test",
+            params={"name": "test_cache_decorator"},
+        )
+
+        assert "Data was successfully cached under" not in caplog.text
