@@ -1,7 +1,7 @@
 import zipfile
-from os import rename
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from pygenesis.cube import Cube, assign_correct_types, parse_cube, rename_axes
@@ -136,3 +136,31 @@ def test_rename_axes(cube, expected_names):
     cube = rename_axes(cube)
 
     assert list(cube["QEI"].columns) == expected_names
+
+
+@pytest.mark.parametrize(
+    "cube, test_cols, test_types",
+    [
+        (
+            "easy_cube",
+            [
+                "BEVSTD_WERT",
+            ],
+            [np.integer],
+        ),
+        (
+            "hard_cube",
+            [
+                "ELG002_WERT",
+                "ELG003_WERT",
+            ],
+            [np.integer, np.integer],
+        ),
+    ],
+    indirect=["cube"],
+)
+def test_rename_axes(cube, test_cols, test_types):
+    cube = assign_correct_types(rename_axes(cube))
+
+    for col, expected_type in zip(test_cols, test_types):
+        assert issubclass(cube["QEI"][col].dtype.type, expected_type)
