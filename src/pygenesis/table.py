@@ -8,6 +8,15 @@ from pygenesis.http_helper import get_data_from_endpoint
 
 
 class Table:
+    """A wrapper class holding all relevant data and metadata about a given table.
+
+    Args:
+        name (str): The unique identifier of this table.
+        raw_data (str): The raw tablefile data as returned by the /data/table endpoint.
+        data (pd.DataFrame): The parsed data as a pandas data frame.
+        metadata (dict): Metadata as returned by the /metadata/table endpoint.
+    """
+
     def __init__(self, name: str):
         self.name = name
         self.raw_data = ""
@@ -15,6 +24,13 @@ class Table:
         self.metadata = {}
 
     def get_data(self, area: str = "all", **kwargs):
+        """Downloads raw data and metadata from GENESIS-Online.
+
+        Additional keyword arguments are passed on to the GENESIS-Online GET request for tablefile.
+
+        Args:
+            area (str, optional): Area to search for the object in GENESIS-Online. Defaults to "all".
+        """
         params = {"name": self.name, "area": area, "format": "ffcsv"}
 
         params |= kwargs

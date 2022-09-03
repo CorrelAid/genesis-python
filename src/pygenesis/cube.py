@@ -1,6 +1,7 @@
 """Module provides functionality to parse cubefile data provided by GENESIS."""
 import copy
 import json
+from typing import List
 
 import pandas as pd
 
@@ -8,6 +9,16 @@ from pygenesis.http_helper import get_data_from_endpoint
 
 
 class Cube:
+    """A wrapper class holding all relevant data and metadata about a given cube.
+
+    Args:
+        name (str): The unique identifier of this cube.
+        raw_data (str): The raw cubefile data as returned by the /data/cubfile endpoint.
+        data (pd.DataFrame): The parsed data as a pandas data frame.
+        cube (dict): Metadata as returned by the /data/cubefile endpoint.
+        metadata (dict): Metadata as returned by the /metadata/cube endpoint.
+    """
+
     def __init__(self, name: str):
         self.name = name
         self.raw_data = ""
@@ -16,6 +27,13 @@ class Cube:
         self.metadata = {}
 
     def get_data(self, area: str = "all", **kwargs):
+        """Downloads raw data and metadata from GENESIS-Online.
+
+        Additional keyword arguments are passed on to the GENESIS-Online GET request for cubefiles.
+
+        Args:
+            area (str, optional): Area to search for the object in GENESIS-Online. Defaults to "all".
+        """
         params = {"name": self.name, "area": area}
 
         params |= kwargs
@@ -44,7 +62,7 @@ def parse_cube(data: str) -> dict:
     """
     cube = {}
     header = None
-    data_block: list[str] = []
+    data_block: List[str] = []
 
     for line in data.splitlines():
         # skip all rows until first header
@@ -151,7 +169,7 @@ def _get_cube_metadata_header_type(line: str) -> str:
 
 def _get_cube_metadata_header(
     line: str, rename_duplicates: bool = False
-) -> list[str]:
+) -> List[str]:
     """Return the metadata header of a cubefile."""
     raw_header = line.split(";")[2:]
     raw_header = [
@@ -176,6 +194,6 @@ def _get_cube_metadata_header(
     return header
 
 
-def _parse_cube_data_line(line: str) -> list[str]:
+def _parse_cube_data_line(line: str) -> List[str]:
     """Return the content of a cube data line."""
     return line.split(";")[1:]
