@@ -38,7 +38,7 @@ def get_data(
     if method == "tablefile":
         params["format"] = "ffcsv"
 
-    params |= kwargs
+    params.update(kwargs)
 
     response = get_response_from_endpoint("data", method, params)
     data = response.text
