@@ -1,5 +1,8 @@
 """Wrapper module for the data endpoint."""
 import json
+import logging
+import select
+import sys
 import time
 import warnings
 
@@ -8,6 +11,7 @@ import requests
 from pygenesis.config import load_config
 
 config = load_config()
+logger = logging.getLogger(__name__)
 
 
 def get_response_from_endpoint(
@@ -39,9 +43,12 @@ def get_response_from_endpoint(
         # test for job-relevant status code and catch possible error
         response_status_code = response.json().get("Status").get("Code", -1)
         if response_status_code == 98:
-            response = _jobs_process(
-                response_status_code, params, endpoint, method
-            )
+            new_params = _jobs_params(params)
+            if type(new_params) == dict:
+                jobs_response = get_response_from_endpoint(
+                    endpoint, method, new_params
+                )
+                response = _jobs_process(jobs_response, params)
     except json.decoder.JSONDecodeError:
         pass
 
@@ -87,9 +94,7 @@ def _generic_status_dict(
 
 
 # TODO: test schreiben (mit automatic y/n) - oder aber y/n entfernen
-def _jobs_process(
-    response_status_code: int, params: dict, endpoint: str, method: str
-) -> requests.Response:
+def _jobs_params(params: dict) -> requests.Response:
     """
     Helper method which handles too large data requests with option of starting a job.
 
@@ -106,20 +111,26 @@ def _jobs_process(
     positive = ["ja", "j", "y", "yes"]
     negative = ["nein", "n", "no"]
 
-    job_bool = ""
-    while job_bool.lower() not in positive + negative:
+    job_bool = [""]
+    while job_bool[0].lower() not in positive + negative:
         # get user input whether to start a job
-        job_bool = input(
+        logger.warning(
             "Die Daten sind zu groß um direkt abgerufen zu werden."
             + "Es muss ein Job gestartet werden, der einige Sekunden braucht,"
             + "um die Daten bereitzustellen und abzurufen."
-            + "\n Sollen wir einen Job für Sie starten?"
+            + "\n Sollen wir einen Job starten?"
             + "\n Ja/Nein:"
         )
+        job_bool, o, e = select.select([sys.stdin], [], [], 15)
+        if not job_bool:
+            logger.warning(
+                "Keinen Input erhalten, es wird kein Job angestoßen."
+            )
+            job_bool = "Nein"
 
     if job_bool.lower() in negative:
         negative_response = _generic_status_dict(
-            response_status_code,
+            -1,
             "You aborted starting a job and therefore receive no data!",
             "Warnung",
         )
@@ -128,33 +139,35 @@ def _jobs_process(
 
     # retry request with job parameter set to True
     params |= {"job": "true"}
-    response = get_response_from_endpoint(endpoint, method, params)
+    return params
+
+
+def _jobs_process(
+    response: requests.Response, params: dict, timeperiod: float = 90
+):
 
     # receive status from response
     job_true_response = response.json()
-    # TODO: If there is no other possibility than response code 99, remove
-    # if selection and use an assert statement to ensure correct/ expected response
-    # assert job_true_response.get("Status").get("Code") == 99, \
-    #    "Unexpected status code when automatically starting a job!"
-    if job_true_response.get("Status").get("Code") == 99:
-        s = job_true_response.get("Status").get("Content")
-        job_ID = s.split(":")[1].strip()
-        # TODO: think about/ discuss logging
-        print(f"Der Job wurde angestoßen mit der ID: {job_ID}")
+    assert (
+        job_true_response.get("Status").get("Code") == 99
+    ), "Unexpected status code when automatically starting a job!"
+    s = job_true_response.get("Status").get("Content")
+    job_id = s.split(":")[1].strip()
+    logger.info("Der Job wurde angestoßen mit der ID: %s", job_id)
 
     # check job status via catalogue
     params |= {"sortcriterion": "time"}
     catalogue_state = None
 
     # set timeout of 90 seconds from now
-    timeout = time.time() + 90
+    timeout = time.time() + timeperiod
     while (
         catalogue_state not in ["Fertig", "finished"] and time.time() < timeout
     ):
         catalogue_response = get_response_from_endpoint(
             "catalogue", "jobs?", params
         )
-        if catalogue_response.json().get("List")[-1].get("Code") == job_ID:
+        if catalogue_response.json().get("List")[-1].get("Code") == job_id:
             catalogue_state = (
                 catalogue_response.json().get("List")[-1].get("State")
             )
@@ -162,15 +175,16 @@ def _jobs_process(
             # find the correct job in list
             pass
         time.sleep(20)
-        # TODO: probably logger, too
-        print(
-            f"Der Endpunkt catalogue/jobs wurde mit der ID {job_ID} angesprochen. Der Status ist: {catalogue_state}"
+        logger.info(
+            "Der Endpunkt catalogue/jobs wurde mit der ID %s angesprochen. Der Status ist: %d",
+            job_ID,
+            catalogue_state,
         )
 
     # download the data if job finished successfully
     if catalogue_state in ["Fertig", "finished"]:
         params_resultfile = {
-            "name": job_ID,
+            "name": job_id,
             "area": "all",
             "language": "de",
         }
@@ -182,7 +196,7 @@ def _jobs_process(
 
     else:
         failed_response = _generic_status_dict(
-            response_status_code,
+            -1,
             "The started job did not finish successfully!",
             "Fehler",
         )

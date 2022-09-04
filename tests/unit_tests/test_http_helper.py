@@ -3,9 +3,10 @@ import json
 import pytest
 import requests
 
-from src.pygenesis.http_helper import (
+from pygenesis.http_helper import (
     _check_invalid_destatis_status_code,
     _check_invalid_status_code,
+    _jobs_params,
 )
 
 # TODO: Add generic dummy request to the server, which is not getting us timed out,
@@ -128,3 +129,36 @@ def test__check_invalid_destatis_status_code_without_error():
             _check_invalid_destatis_status_code(status)
         except Exception:
             assert False
+
+
+def test__jobs_params_wrong_user_input(monkeypatch):
+    """
+    Basic tests to check user input besides positive or negative.
+    """
+    monkeypatch.setattr("builtins.input", lambda _: "Jein")
+    new_params = _jobs_params({})
+    assert new_params.status_code == 42
+
+
+def test__jobs_params_no_user_input(monkeypatch):
+    """
+    Basic tests to check no user input.
+    """
+    new_params = _jobs_params({})
+    assert new_params.status_code == 42
+
+
+def test__check_jobs_params_all_successful_user_input(monkeypatch):
+    """
+    Basic tests to check the successful user input.
+    Testing positive input for starting a job and negative input for not starting the job.
+    """
+    inputs = ["ja", "j", "y", "yes", "nein", "n", "no"]
+    for i in inputs:
+        monkeypatch.setattr("builtins.input", lambda _: i)
+        new_params = _jobs_params({})
+        assert type(new_params) in [dict, requests.models.Response]
+        if type(new_params) == dict:
+            assert new_params.get("job") == "true"
+        if type(new_params) == requests.models.Response:
+            assert new_params.status_code == 42
