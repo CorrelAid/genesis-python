@@ -9,7 +9,7 @@ from pygenesis.custom_exceptions import DestatisStatusError
 from pygenesis.http_helper import (
     _check_invalid_destatis_status_code,
     _check_invalid_status_code,
-    get_response_from_endpoint,
+    get_data_from_endpoint,
 )
 
 
@@ -73,7 +73,7 @@ def test_get_response_from_endpoint(mock_config, mock_requests):
     }
     mock_requests.return_value = _generic_request_status()
 
-    get_response_from_endpoint("endpoint", "method", {})
+    get_data_from_endpoint(endpoint="endpoint", method="method", params={})
 
 
 def test__check_invalid_status_code_with_error():

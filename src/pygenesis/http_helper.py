@@ -4,15 +4,15 @@ import logging
 
 import requests
 
+from pygenesis.cache import cache_data_from_response
 from pygenesis.config import load_config
 from pygenesis.custom_exceptions import DestatisStatusError
 
 logger = logging.getLogger(__name__)
 
 
-def get_response_from_endpoint(
-    endpoint: str, method: str, params: dict
-) -> requests.Response:
+@cache_data_from_response
+def get_data_from_endpoint(*, endpoint: str, method: str, params: dict) -> str:
     """
     Wrapper method which constructs a url for querying data from Destatis and
     sends a GET request.
@@ -23,7 +23,7 @@ def get_response_from_endpoint(
         params (dict): dictionary of query parameters
 
     Returns:
-        requests.Response: the response from Destatis
+        str: the raw text response from Destatis.
     """
     config = load_config()
     url = f"{config['GENESIS API']['base_url']}{endpoint}/{method}"
@@ -35,14 +35,14 @@ def get_response_from_endpoint(
         }
     )
 
-    response = requests.get(url, params=params, timeout=30)
+    response = requests.get(url, params=params, timeout=(1, 15))
 
     response.encoding = "UTF-8"
 
     _check_invalid_status_code(response.status_code)
     _check_invalid_destatis_status_code(response)
 
-    return response
+    return str(response.text)
 
 
 def _check_invalid_status_code(status_code: int) -> None:
