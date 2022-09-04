@@ -7,7 +7,6 @@ import requests
 from pygenesis.config import load_config
 from pygenesis.custom_exceptions import DestatisStatusError
 
-config = load_config()
 logger = logging.getLogger(__name__)
 
 
@@ -26,6 +25,7 @@ def get_response_from_endpoint(
     Returns:
         requests.Response: the response from Destatis
     """
+    config = load_config()
     url = f"{config['GENESIS API']['base_url']}{endpoint}/{method}"
 
     params |= {
