@@ -18,10 +18,10 @@ class Table:
     """
 
     def __init__(self, name: str):
-        self.name = name
+        self.name: str = name
         self.raw_data = ""
         self.data = pd.DataFrame()
-        self.metadata = {}
+        self.metadata: dict = {}
 
     def get_data(self, area: str = "all", **kwargs):
         """Downloads raw data and metadata from GENESIS-Online.

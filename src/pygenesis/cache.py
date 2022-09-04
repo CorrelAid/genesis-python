@@ -11,7 +11,7 @@ from pygenesis.config import load_config
 logger = logging.getLogger(__name__)
 
 
-def cache_data_from_response(func: Callable) -> Callable:
+def cache_data_from_response(func: Callable[..., str]) -> Callable[..., str]:
     """Store downloaded data on disk with download time as parent folder.
 
     Args:
@@ -19,7 +19,7 @@ def cache_data_from_response(func: Callable) -> Callable:
     """
 
     @wraps(func)
-    def wrapper_func(**kwargs):
+    def wrapper_func(**kwargs) -> str:
         endpoint = kwargs["endpoint"]
         method = kwargs["method"]
         genesis_id = kwargs["params"]["name"]

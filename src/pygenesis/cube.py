@@ -20,11 +20,11 @@ class Cube:
     """
 
     def __init__(self, name: str):
-        self.name = name
+        self.name: str = name
         self.raw_data = ""
         self.data = pd.DataFrame()
-        self.cube = {}
-        self.metadata = {}
+        self.cube: dict[str, pd.DataFrame] = {}
+        self.metadata: dict = {}
 
     def get_data(self, area: str = "all", **kwargs):
         """Downloads raw data and metadata from GENESIS-Online.
@@ -62,7 +62,7 @@ def parse_cube(data: str) -> dict:
     """
     cube = {}
     header = None
-    data_block: List[str] = []
+    data_block: List[List[str]] = []
 
     for line in data.splitlines():
         # skip all rows until first header
@@ -83,10 +83,11 @@ def parse_cube(data: str) -> dict:
 
     # the last data block has no header after it so we have to do it here
     # for cubes with more than one variable in DQI, we have to repeat the last four columns
-    last_four_columns = header[-4:]
-    header = header[:-4]
-    for var in cube["DQI"]["NAME"]:
-        header.extend([f"{var}_{col}" for col in last_four_columns])
+    if header:
+        last_four_columns = header[-4:]
+        header = header[:-4]
+        for var in cube["DQI"]["NAME"]:
+            header.extend([f"{var}_{col}" for col in last_four_columns])
 
     cube[header_type] = pd.DataFrame(data_block, columns=header)
 
@@ -143,11 +144,11 @@ def assign_correct_types(cube: dict) -> dict:
 
     for var, dtype in zip(cube["DQI"]["NAME"], cube["DQI"]["DST"]):
         if dtype == "GANZ":
-            cast_type = int
+            cast_type = int  # type: ignore[assignment]
         elif dtype == "FEST":
-            cast_type = float
+            cast_type = float  # type: ignore[assignment]
         else:
-            cast_type = None
+            cast_type = None  # type: ignore[assignment]
 
         if cast_type is not None:
             cube["QEI"].loc[:, f"{var}_WERT"] = (

@@ -1,5 +1,5 @@
 """Wrapper module for the data endpoint."""
-from typing import Literal, Union
+from typing import Literal
 
 import requests
 
@@ -39,7 +39,7 @@ def get_data_from_endpoint(*, endpoint: str, method: str, params: dict) -> str:
     _check_invalid_status_code(response.status_code)
     _check_invalid_destatis_status_code(response)
 
-    return response.text
+    return str(response.text)
 
 
 def _check_invalid_status_code(status_code: int) -> None:
