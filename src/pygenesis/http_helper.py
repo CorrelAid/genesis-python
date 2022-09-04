@@ -32,7 +32,7 @@ def get_data_from_endpoint(*, endpoint: str, method: str, params: dict) -> str:
         "password": config["GENESIS API"]["password"],
     }
 
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, timeout=(1, 15))
 
     response.encoding = "UTF-8"
 
