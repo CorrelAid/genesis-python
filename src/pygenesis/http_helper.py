@@ -28,10 +28,12 @@ def get_response_from_endpoint(
     config = load_config()
     url = f"{config['GENESIS API']['base_url']}{endpoint}/{method}"
 
-    params |= {
-        "username": config["GENESIS API"]["username"],
-        "password": config["GENESIS API"]["password"],
-    }
+    params.update(
+        {
+            "username": config["GENESIS API"]["username"],
+            "password": config["GENESIS API"]["password"],
+        }
+    )
 
     response = requests.get(url, params=params)
 

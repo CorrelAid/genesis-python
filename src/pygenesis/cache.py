@@ -73,9 +73,7 @@ def clean_cache(file: Optional[str] = None) -> None:
         cache_dir = Path(config["DATA"]["cache_dir"])
     except KeyError as e:
         logger.critical(
-            "Cache dir does not exist! Please make sure init_config() was run properly. \
-                Path: %s, Error: %s",
-            cache_dir,
+            "Cache dir does not exist! Please make sure init_config() was run properly. Error: %s",
             e,
         )
 
