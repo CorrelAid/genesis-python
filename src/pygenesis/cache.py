@@ -1,10 +1,11 @@
-"""Module provides functions/decorators to cache downloaded data."""
+"""Module provides functions/decorators to cache downloaded data as well as remove cached data."""
 import logging
+import shutil
 import zipfile
 from datetime import date
 from functools import wraps
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
 
 from pygenesis.config import load_config
 
@@ -20,11 +21,11 @@ def cache_data_from_response(func: Callable[..., str]) -> Callable[..., str]:
 
     @wraps(func)
     def wrapper_func(**kwargs) -> str:
-        endpoint = kwargs["endpoint"]
-        method = kwargs["method"]
-        genesis_id = kwargs["params"]["name"]
+        endpoint = kwargs.get("endpoint")
+        method = kwargs.get("method")
+        genesis_id = kwargs.get("params", {}).get("name")
 
-        if endpoint != "data":
+        if endpoint is None or method is None or endpoint != "data":
             return func(**kwargs)
 
         config = load_config()
@@ -74,3 +75,37 @@ def cache_data_from_response(func: Callable[..., str]) -> Callable[..., str]:
         return data
 
     return wrapper_func
+
+
+def clear_cache(name: Optional[str] = None) -> None:
+    """Clean the data cache completely or just a specified name.
+
+    Args:
+        name (str, optional): Unique name to be deleted from cached data.
+    """
+    config = load_config()
+
+    # check for cache_dir in DATA section of the config.ini
+    try:
+        cache_dir = Path(config["DATA"]["cache_dir"])
+    except KeyError as e:
+        logger.critical(
+            "Cache dir does not exist! Please make sure init_config() was run properly. Error: %s",
+            e,
+        )
+
+    # remove specified file (directory) from the data cache
+    # or clear complete cache (remove childs, preserve base)
+    file_paths = [cache_dir / name] if name is not None else cache_dir.iterdir()
+
+    for file_path in file_paths:
+        # delete if file or symlink, otherwise remove complete tree
+        try:
+            if file_path.is_file() or file_path.is_symlink():
+                file_path.unlink()
+            elif file_path.is_dir():
+                shutil.rmtree(file_path)
+        except (OSError, ValueError, FileNotFoundError) as e:
+            logger.warning("Failed to delete %s. Reason: %s", file_path, e)
+
+        logger.info("Removed files: %s", file_paths)

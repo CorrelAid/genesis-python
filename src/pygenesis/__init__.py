@@ -7,7 +7,8 @@ import pygenesis as pgen
 print("Version:", pgen.__version__)
 ```
 """
-from pygenesis import config
+from pygenesis.cache import clear_cache
+from pygenesis.config import init_config
 from pygenesis.cube import Cube
 from pygenesis.table import Table
 

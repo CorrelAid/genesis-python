@@ -1,11 +1,12 @@
 import logging
+import re
 import zipfile
 from datetime import date
 from pathlib import Path
 
 import pytest
 
-from pygenesis.cache import cache_data_from_response
+from pygenesis.cache import cache_data_from_response, clear_cache
 from pygenesis.config import (
     DEFAULT_SETTINGS_FILE,
     _write_config,
@@ -18,7 +19,11 @@ SLEEP_TIME = 0.1
 
 @pytest.fixture()
 def cache_dir(tmp_path_factory):
-    return tmp_path_factory.mktemp(".pygenesis")
+    # remove white-space and non-latin characters (issue fo some user names)
+    temp_dir = str(tmp_path_factory.mktemp(".pygenesis"))
+    temp_dir = re.sub(r"[^\x00-\x7f]", r"", temp_dir.replace(" ", ""))
+
+    return Path(temp_dir)
 
 
 @pytest.fixture(autouse=True)
@@ -97,3 +102,18 @@ def test_cache_data_twice(cache_dir, caplog):
         )
 
         assert "Data was successfully cached under" not in caplog.text
+
+
+def test_clean_cache(cache_dir):
+    init_config(cache_dir)
+
+    name = "test_clean_cache_cache_file"
+    _ = decorated_data(endpoint="data", method="test", params={"name": name})
+
+    cached_data_file: Path = next((cache_dir / "data" / name).glob("*.zip"))
+
+    assert cached_data_file.exists() and cached_data_file.is_file()
+
+    clear_cache(name=name)
+
+    assert not cached_data_file.exists() and not cached_data_file.is_file()
