@@ -58,12 +58,20 @@ def _generic_request_status(
 
 
 @patch("requests.get")
-def test_get_response_from_endpoint(mocker):
+@patch("pygenesis.http_helper.load_config")
+def test_get_response_from_endpoint(mock_config, mock_requests):
     """
     Test once with generic API response, more detailed tests
     of subfunctions and specific cases below.
     """
-    mocker.return_value = _generic_request_status()
+    mock_config.return_value = {
+        "GENESIS API": {
+            "base_url": "mocked_url",
+            "username": "JaneDoe",
+            "password": "password",
+        }
+    }
+    mock_requests.return_value = _generic_request_status()
 
     get_response_from_endpoint("endpoint", "method", {})
 
