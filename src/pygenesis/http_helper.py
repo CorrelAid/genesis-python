@@ -35,7 +35,7 @@ def get_response_from_endpoint(
         }
     )
 
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, timeout=30)
 
     response.encoding = "UTF-8"
 
