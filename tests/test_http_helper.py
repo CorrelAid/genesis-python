@@ -3,41 +3,14 @@ import logging
 
 import pytest
 import requests
+from mock import patch
 
 from pygenesis.custom_exceptions import DestatisStatusError
 from pygenesis.http_helper import (
     _check_invalid_destatis_status_code,
     _check_invalid_status_code,
+    get_response_from_endpoint,
 )
-
-# TODO: Add generic dummy request to the server, which is not getting us timed out,
-# to test get_response_from_endpoint completely?
-
-
-def test__check_invalid_status_code_with_error():
-    """
-    Basic tests to check an error status code (4xx, 5xx)
-    for _handle_status_code method.
-    """
-    for status_code in [400, 500]:
-        with pytest.raises(requests.exceptions.HTTPError) as e:
-            _check_invalid_status_code(status_code)
-        assert (
-            str(e.value)
-            == f"Error {status_code}: The server returned a {status_code} status code"
-        )
-
-
-def test__check_invalid_status_code_without_error():
-    """
-    Basic test to check a valid status code (2xx)
-    for the _handle_status_code method.
-    """
-    status_code = 200
-    try:
-        _check_invalid_status_code(status_code)
-    except Exception:
-        assert False
 
 
 def _generic_request_status(
@@ -84,10 +57,47 @@ def _generic_request_status(
     return request_status
 
 
+@patch("requests.get")
+def test_get_response_from_endpoint(mocker):
+    """
+    Test once with generic API response, more detailed tests
+    of subfunctions and specific cases below.
+    """
+    mocker.return_value = _generic_request_status()
+
+    get_response_from_endpoint("endpoint", "method", {})
+
+
+def test__check_invalid_status_code_with_error():
+    """
+    Basic tests to check an error status code (4xx, 5xx)
+    for _handle_status_code method.
+    """
+    for status_code in [400, 500]:
+        with pytest.raises(requests.exceptions.HTTPError) as e:
+            _check_invalid_status_code(status_code)
+        assert (
+            str(e.value)
+            == f"Error {status_code}: The server returned a {status_code} status code"
+        )
+
+
+def test__check_invalid_status_code_without_error():
+    """
+    Basic test to check a valid status code (2xx)
+    for the _handle_status_code method.
+    """
+    status_code = 200
+    try:
+        _check_invalid_status_code(status_code)
+    except Exception:
+        assert False
+
+
 def test__check_invalid_destatis_status_code_with_error():
     """
     Basic tests to check an error status code as defined in the
-    documentation via code (e.g. 104) or type ('Error', 'Fehler').
+    documentation via code (e.g. -1, 104) or type ('Error', 'Fehler').
     """
     for status in [
         _generic_request_status(code=104),
@@ -100,6 +110,16 @@ def test__check_invalid_destatis_status_code_with_error():
         with pytest.raises(DestatisStatusError) as e:
             _check_invalid_destatis_status_code(status)
         assert str(e.value) == status_content
+
+    # also test generic -1 error code
+    generic_error_status = _generic_request_status(code=-1)
+
+    with pytest.raises(DestatisStatusError) as e:
+        _check_invalid_destatis_status_code(generic_error_status)
+    assert (
+        str(e.value)
+        == "Error: There is a system error. Please check your query parameters."
+    )
 
 
 def test__check_invalid_destatis_status_code_with_warning(caplog):

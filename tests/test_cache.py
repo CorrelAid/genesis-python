@@ -1,3 +1,4 @@
+import re
 import time
 from datetime import date
 from pathlib import Path
@@ -20,7 +21,11 @@ SLEEP_TIME = 0.1
 
 @pytest.fixture()
 def cache_dir(tmp_path_factory):
-    return tmp_path_factory.mktemp(".pygenesis")
+    # remove white-space and non-latin characters (issue fo some user names)
+    temp_dir = str(tmp_path_factory.mktemp(".pygenesis"))
+    temp_dir = re.sub(r"[^\x00-\x7f]", r"", temp_dir.replace(" ", ""))
+
+    return Path(temp_dir)
 
 
 @pytest.fixture(autouse=True)
@@ -77,6 +82,15 @@ def test_cache_data_wrapper(cache_dir):
     pd.testing.assert_frame_equal(data, restored_data, check_index_type=False)
 
 
+def test_cache_data_wrapper_without_name(cache_dir):
+    init_config(cache_dir)
+
+    data = decorated_data(name=None)
+
+    assert isinstance(data, pd.DataFrame)
+    assert not data.empty
+
+
 def test_cache_data_twice(cache_dir):
     init_config(cache_dir)
 
@@ -93,7 +107,6 @@ def test_cache_data_twice(cache_dir):
     assert load_time < SLEEP_TIME
 
 
-# TODO: double-check functionality of this test
 def clean_cache_setup(cache_dir, file: Optional[str] = None):
     """
     Convenience function to cache a file and remove it with different options.
@@ -102,7 +115,7 @@ def clean_cache_setup(cache_dir, file: Optional[str] = None):
 
     assert len(list((cache_dir / "data").glob("*"))) == 0
 
-    name = "test_clean_cache_decorator" if file is None else file
+    name = "test_clean_cache_cache_file" if file is None else file
     data = decorated_data(name=name)
 
     assert isinstance(data, pd.DataFrame)
@@ -124,5 +137,12 @@ def clean_cache_setup(cache_dir, file: Optional[str] = None):
 
 
 def test_clean_cache(cache_dir):
+    # clean complete cache
     clean_cache_setup(cache_dir)
-    clean_cache_setup(cache_dir, file="test_clean_cache_decorator_file")
+    # TODO: So far not working as expected: is_file returns false & treated like directory
+    # clean only one file
+    name = "test_clean_cache_cache_file"
+    file_path = (
+        Path("data") / name / str(date.today()).replace("-", "") / f"{name}.xz"
+    )
+    clean_cache_setup(cache_dir, file=str(file_path))
