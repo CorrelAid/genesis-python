@@ -88,6 +88,7 @@ def _check_destatis_status(destatis_status: dict) -> None:
     If the status message is erroneous an error will be raised.
 
     Possible Codes (2.1.2 Grundstruktur der Responses):
+    # TODO: Ask Destatis for full list of error codes
     - 0: "erfolgreich" (Type: "Information")
     - 22: "erfolgreich mit Parameteranpassung" (Type: "Warnung")
     - 104: "Kein passendes Objekt zu Suche" (Type: "Information")
@@ -110,8 +111,7 @@ def _check_destatis_status(destatis_status: dict) -> None:
     # check for generic/ system error
     if destatis_status_code == -1:
         raise DestatisStatusError(
-            "Error: There is a system error.\
-                Please check your query parameters."
+            "Error: There is a system error. Please check your query parameters."
         )
 
     # check for destatis/ query errors
@@ -125,7 +125,6 @@ def _check_destatis_status(destatis_status: dict) -> None:
         logger.warning(destatis_status_content)
 
     # output information to user
-    # TODO: Would logger.info (with forced visibility) be the better option?
     elif destatis_status_type.lower() == "information":
         logger.info(
             "Code %d : %s", destatis_status_code, destatis_status_content

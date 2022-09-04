@@ -69,13 +69,14 @@ def clean_cache(file: Optional[str] = None) -> None:
     config = load_config()
 
     # check for cache_dir in DATA section of the config.ini
-    # TODO: What happens if this key is not defined? is that error understandable?
-    cache_dir = Path(config["DATA"]["cache_dir"])
-
-    if not cache_dir.is_dir() or not cache_dir.exists():
+    try:
+        cache_dir = Path(config["DATA"]["cache_dir"])
+    except KeyError as e:
         logger.critical(
-            "Cache dir does not exist! Please make sure init_config() was run properly. Path: %s",
+            "Cache dir does not exist! Please make sure init_config() was run properly. \
+                Path: %s, Error: %s",
             cache_dir,
+            e,
         )
 
     # remove specified file (directory) from the data cache
