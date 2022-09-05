@@ -4,16 +4,15 @@ import logging
 
 import requests
 
+from pygenesis.cache import cache_data_from_response
 from pygenesis.config import load_config
 from pygenesis.custom_exceptions import DestatisStatusError
 
-config = load_config()
 logger = logging.getLogger(__name__)
 
 
-def get_response_from_endpoint(
-    endpoint: str, method: str, params: dict
-) -> requests.Response:
+@cache_data_from_response
+def get_data_from_endpoint(*, endpoint: str, method: str, params: dict) -> str:
     """
     Wrapper method which constructs a url for querying data from Destatis and
     sends a GET request.
@@ -24,24 +23,26 @@ def get_response_from_endpoint(
         params (dict): dictionary of query parameters
 
     Returns:
-        requests.Response: the response from Destatis
+        str: the raw text response from Destatis.
     """
+    config = load_config()
     url = f"{config['GENESIS API']['base_url']}{endpoint}/{method}"
 
-    # TODO: Do we want to add an (explicit) parameter "language"?
-    params |= {
-        "username": config["GENESIS API"]["username"],
-        "password": config["GENESIS API"]["password"],
-    }
+    params.update(
+        {
+            "username": config["GENESIS API"]["username"],
+            "password": config["GENESIS API"]["password"],
+        }
+    )
 
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, timeout=(1, 15))
 
     response.encoding = "UTF-8"
 
     _check_invalid_status_code(response.status_code)
     _check_invalid_destatis_status_code(response)
 
-    return response
+    return str(response.text)
 
 
 def _check_invalid_status_code(status_code: int) -> None:
@@ -89,6 +90,7 @@ def _check_destatis_status(destatis_status: dict) -> None:
     If the status message is erroneous an error will be raised.
 
     Possible Codes (2.1.2 Grundstruktur der Responses):
+    # TODO: Ask Destatis for full list of error codes
     - 0: "erfolgreich" (Type: "Information")
     - 22: "erfolgreich mit Parameteranpassung" (Type: "Warnung")
     - 104: "Kein passendes Objekt zu Suche" (Type: "Information")
@@ -111,8 +113,7 @@ def _check_destatis_status(destatis_status: dict) -> None:
     # check for generic/ system error
     if destatis_status_code == -1:
         raise DestatisStatusError(
-            "Error: There is a system error.\
-                Please check your query parameters."
+            "Error: There is a system error. Please check your query parameters."
         )
 
     # check for destatis/ query errors
@@ -126,7 +127,6 @@ def _check_destatis_status(destatis_status: dict) -> None:
         logger.warning(destatis_status_content)
 
     # output information to user
-    # TODO: Would logger.info (with forced visibility) be the better option?
     elif destatis_status_type.lower() == "information":
         logger.info(
             "Code %d : %s", destatis_status_code, destatis_status_content

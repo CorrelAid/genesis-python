@@ -1,12 +1,15 @@
 import logging
+import re
 from configparser import ConfigParser
 from pathlib import Path
 
 import pytest
+from mock import patch
 
 from pygenesis.config import (
     DEFAULT_SETTINGS_FILE,
     _write_config,
+    create_settings,
     get_config_path_from_settings,
     init_config,
     load_config,
@@ -16,7 +19,11 @@ from pygenesis.config import (
 
 @pytest.fixture()
 def config_dir(tmp_path_factory):
-    return tmp_path_factory.mktemp(".pygenesis")
+    # remove white-space and non-latin characters (issue fo some user names)
+    temp_dir = str(tmp_path_factory.mktemp(".pygenesis"))
+    temp_dir = re.sub(r"[^\x00-\x7f]", r"", temp_dir.replace(" ", ""))
+
+    return Path(temp_dir)
 
 
 @pytest.fixture(autouse=True)
@@ -28,6 +35,14 @@ def restore_settings():
 
 def test_settings():
     assert DEFAULT_SETTINGS_FILE.exists() and DEFAULT_SETTINGS_FILE.is_file()
+
+
+@patch("pygenesis.config.DEFAULT_CONFIG_DIR")
+@patch("pygenesis.config.DEFAULT_SETTINGS_FILE")
+def test_create_settings(mock_config, mock_settings, config_dir):
+    mock_config.return_value = config_dir
+    mock_settings.return_value = config_dir / "settings.ini"
+    create_settings()
 
 
 def test_load_settings():
