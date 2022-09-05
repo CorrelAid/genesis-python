@@ -78,6 +78,7 @@ def cache_data_from_response(func: Callable[..., str]) -> Callable[..., str]:
 
 def clear_cache(name: Optional[str] = None) -> None:
     """Clean the data cache completely or just a specified name.
+
     Args:
         name (str, optional): Unique name to be deleted from cached data.
     """
