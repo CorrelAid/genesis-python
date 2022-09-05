@@ -5,10 +5,9 @@ from pygenesis.config import (
     get_config_path_from_settings,
     load_config,
 )
-from pygenesis.http_helper import get_response_from_endpoint
+from pygenesis.http_helper import get_data_from_endpoint
 
 
-# TODO: write tests
 def password(new_password: str):
     """
     Changes Genesis REST-API password and updates local config.
@@ -36,12 +35,12 @@ def password(new_password: str):
         )
 
     # change remote password
-    response = get_response_from_endpoint("profile", "password", params)
+    response_text = get_data_from_endpoint("profile", "password", params)
     # change local password
     config["GENESIS API"]["password"] = new_password
     _write_config(config, get_config_path_from_settings())
 
-    return response.text
+    return response_text
 
 
 def remove_result():

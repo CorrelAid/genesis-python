@@ -5,10 +5,7 @@ import requests
 from pygenesis.config import load_config
 from pygenesis.http_helper import _check_invalid_status_code
 
-config = load_config()
 
-
-# TODO: Write tests
 def whoami() -> str:
     """
     Wrapper method which constructs an URL for testing the Destatis API
@@ -17,16 +14,17 @@ def whoami() -> str:
     Returns:
         str: text test response from Destatis
     """
+    config = load_config()
     url = f"{config['GENESIS API']['base_url']}" + "helloworld/whoami"
 
-    response = requests.get(url)
+    response = requests.get(url, timeout=(1, 15))
 
     _check_invalid_status_code(response.status_code)
 
     return response.text
 
 
-def logincheck():
+def logincheck() -> str:
     """
     Wrapper method which constructs an URL for testing the Destatis API
     logincheck method, which tests the login credentials (from the config.ini).
@@ -34,6 +32,7 @@ def logincheck():
     Returns:
         str: text logincheck response from Destatis
     """
+    config = load_config()
     url = f"{config['GENESIS API']['base_url']}" + "helloworld/logincheck"
 
     params = {
@@ -41,10 +40,10 @@ def logincheck():
         "password": config["GENESIS API"]["password"],
     }
 
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, timeout=(1, 15))
 
-    # NOTE: Cannot use get_response_from_endpoint due to colliding
-    # and misleading usage of "Status" key in response
+    # NOTE: Cannot use get_data_from_endpoint due to colliding
+    # and misleading usage of "Status" key in API response
     _check_invalid_status_code(response.status_code)
 
     return response.text
