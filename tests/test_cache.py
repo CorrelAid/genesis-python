@@ -1,12 +1,12 @@
-import time
+import logging
+import re
+import zipfile
 from datetime import date
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 import pytest
 
-from pygenesis.cache import cache_data
+from pygenesis.cache import cache_data_from_response, clear_cache
 from pygenesis.config import (
     DEFAULT_SETTINGS_FILE,
     _write_config,
@@ -19,7 +19,11 @@ SLEEP_TIME = 0.1
 
 @pytest.fixture()
 def cache_dir(tmp_path_factory):
-    return tmp_path_factory.mktemp(".pygenesis")
+    # remove white-space and non-latin characters (issue fo some user names)
+    temp_dir = str(tmp_path_factory.mktemp(".pygenesis"))
+    temp_dir = re.sub(r"[^\x00-\x7f]", r"", temp_dir.replace(" ", ""))
+
+    return Path(temp_dir)
 
 
 @pytest.fixture(autouse=True)
@@ -29,12 +33,9 @@ def restore_settings():
     _write_config(old_settings, DEFAULT_SETTINGS_FILE)
 
 
-@cache_data
-def decorated_data(*, name):
-    time.sleep(SLEEP_TIME)
-    return pd.DataFrame(
-        np.random.random(size=(10, 5)), columns=["a", "b", "c", "d", "e"]
-    )
+@cache_data_from_response
+def decorated_data(*, endpoint, method, params):
+    return "test data"
 
 
 def test_cache_data_wrapper(cache_dir):
@@ -42,17 +43,18 @@ def test_cache_data_wrapper(cache_dir):
 
     assert len(list((cache_dir / "data").glob("*"))) == 0
 
-    data = decorated_data(name="test_cache_decorator")
+    data = decorated_data(
+        endpoint="data", method="test", params={"name": "test_cache_decorator"}
+    )
 
-    assert isinstance(data, pd.DataFrame)
-    assert not data.empty
+    assert isinstance(data, str)
+    assert len(data) > 0
 
     cached_data_file: Path = (
         cache_dir
         / "data"
         / "test_cache_decorator"
-        / str(date.today()).replace("-", "")
-        / "test_cache_decorator.xz"
+        / (str(date.today()).replace("-", "") + "_" + "data_test.zip")
     )
 
     assert cached_data_file.exists() and cached_data_file.is_file()
@@ -69,24 +71,49 @@ def test_cache_data_wrapper(cache_dir):
     ]
 
     assert len(objs_in_name_dir) == 1
-    assert objs_in_name_dir[0] == cached_data_file.parent
+    assert objs_in_name_dir[0] == cached_data_file
 
-    restored_data = pd.read_csv(cached_data_file)
+    with zipfile.ZipFile(cached_data_file, "r") as myzip:
+        with myzip.open(cached_data_file.name.replace(".zip", ".txt")) as file:
+            restored_data = file.read().decode()
 
-    pd.testing.assert_frame_equal(data, restored_data, check_index_type=False)
+    assert restored_data == data
 
 
-def test_cache_data_twice(cache_dir):
+def test_cache_data_twice(cache_dir, caplog):
     init_config(cache_dir)
 
-    load_time = time.perf_counter()
-    data = decorated_data(name="test_cache_decorator")
-    load_time = time.perf_counter() - load_time
+    with caplog.at_level(logging.INFO):
+        _ = decorated_data(
+            endpoint="data",
+            method="test",
+            params={"name": "test_cache_decorator"},
+        )
 
-    assert load_time >= SLEEP_TIME
+        assert "Data was successfully cached under" in caplog.text
 
-    load_time = time.perf_counter()
-    data = decorated_data(name="test_cache_decorator")
-    load_time = time.perf_counter() - load_time
+    caplog.clear()
 
-    assert load_time < SLEEP_TIME
+    with caplog.at_level(logging.INFO):
+        _ = decorated_data(
+            endpoint="data",
+            method="test",
+            params={"name": "test_cache_decorator"},
+        )
+
+        assert "Data was successfully cached under" not in caplog.text
+
+
+def test_clean_cache(cache_dir):
+    init_config(cache_dir)
+
+    name = "test_clean_cache_cache_file"
+    _ = decorated_data(endpoint="data", method="test", params={"name": name})
+
+    cached_data_file: Path = next((cache_dir / "data" / name).glob("*.zip"))
+
+    assert cached_data_file.exists() and cached_data_file.is_file()
+
+    clear_cache(name=name)
+
+    assert not cached_data_file.exists() and not cached_data_file.is_file()
