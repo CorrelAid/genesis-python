@@ -37,8 +37,8 @@ class Results:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def __str__(self) -> int:
-        return self.df.to_markdown()
+    def __str__(self) -> str:
+        return str(self.df.to_markdown())
 
     def __len__(self) -> int:
         if len(self.df) > 0:
@@ -186,7 +186,7 @@ class Find:
         query (str): The query that is provided to find endpoint.
     """
 
-    def __init__(self, query: str) -> None:
+    def __init__(self, query: str, top_n_preview: int = 5) -> None:
         """Method for retrieving data from find endpoint.
 
         Args:
@@ -199,17 +199,17 @@ class Find:
             self.tables: Tables that match with the query.
             self.variables: Variables that match with the query.
         """
-
         self.query = query
-        self.top_n_preview = None
-        self.statistics = None
-        self.variables = None
-        self.tables = None
-        self.cubes = None
+
+        self.top_n_preview = top_n_preview
+        self.statistics = Results(pd.DataFrame(), "statistics")
+        self.variables = Results(pd.DataFrame(), "variables")
+        self.tables = Results(pd.DataFrame(), "tables")
+        self.cubes = Results(pd.DataFrame(), "cubes")
+
         self.is_run = False
 
-    def run(self, top_n_preview: int = 5):
-        self.top_n_preview = top_n_preview
+    def run(self):
         self.statistics = self._get_find_results("statistics")
         self.variables = self._get_find_results("variables")
         self.tables = self._get_find_results("tables")
