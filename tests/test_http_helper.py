@@ -9,8 +9,8 @@ from pygenesis.custom_exceptions import DestatisStatusError
 from pygenesis.http_helper import (
     _check_invalid_destatis_status_code,
     _check_invalid_status_code,
-    get_data_from_endpoint,
     _jobs_params,
+    get_data_from_endpoint,
 )
 
 
@@ -176,7 +176,7 @@ def test__jobs_params_wrong_user_input(monkeypatch):
     Basic tests to check user input besides positive or negative.
     """
     monkeypatch.setattr("builtins.input", lambda _: "Jein")
-    new_params = _jobs_params({})
+    new_params = _jobs_params({}, 0.01)
     assert new_params.status_code == 42
 
 
@@ -184,7 +184,7 @@ def test__jobs_params_no_user_input(monkeypatch):
     """
     Basic tests to check no user input.
     """
-    new_params = _jobs_params({})
+    new_params = _jobs_params({}, 0.01)
     assert new_params.status_code == 42
 
 
@@ -196,7 +196,7 @@ def test__check_jobs_params_all_successful_user_input(monkeypatch):
     inputs = ["ja", "j", "y", "yes", "nein", "n", "no"]
     for i in inputs:
         monkeypatch.setattr("builtins.input", lambda _: i)
-        new_params = _jobs_params({})
+        new_params = _jobs_params({}, 0.01)
         assert type(new_params) in [dict, requests.models.Response]
         if type(new_params) == dict:
             assert new_params.get("job") == "true"

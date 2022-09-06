@@ -98,7 +98,7 @@ def _generic_status_dict(
 
 
 # TODO: test schreiben (mit automatic y/n) - oder aber y/n entfernen
-def _jobs_params(params: dict) -> requests.Response:
+def _jobs_params(params: dict, timeperiod: float = 15) -> requests.Response:
     """
     Helper method which handles too large data requests with option of starting a job.
 
@@ -125,7 +125,7 @@ def _jobs_params(params: dict) -> requests.Response:
             + "\n Sollen wir einen Job starten?"
             + "\n Ja/Nein:"
         )
-        job_bool, o, e = select.select([sys.stdin], [], [], 15)
+        job_bool, o, e = select.select([sys.stdin], [], [], timeperiod)
         if not job_bool:
             logger.warning(
                 "Keinen Input erhalten, es wird kein Job angestoßen."
