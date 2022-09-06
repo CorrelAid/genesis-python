@@ -51,7 +51,8 @@ class Results:
         Returns the code for a given list of tables.
 
         Args:
-             row_numbers (list): A list that contains the row numbers from the results objects. This is not the object code."
+             row_numbers (list): A list that contains the row numbers from the results objects. This is not the object
+             code."
         Returns:
              table codes (list): Contains the corresponding tables codes.
         """
@@ -64,7 +65,8 @@ class Results:
         Prints meta data for a given list of tables.
 
         Args:
-              row_numbers (list): A list that contains the row_numbers from the results objects. This is not the object code."
+              row_numbers (list): A list that contains the row_numbers from the results objects. This is not the object
+              code."
         """
         codes = self.df.iloc[row_numbers]["Code"]
 
@@ -218,6 +220,11 @@ class Find:
         print(self.summary())
 
     def summary(self):
+        """
+        Returns:
+            summary_string: String that contains summary statistics.
+        """
+
         if self.is_run:
             return "\n".join(
                 [
@@ -239,7 +246,7 @@ class Find:
                     "# Preview:",
                     self.cubes.df.iloc[: self.top_n_preview].to_markdown(),
                     f"{'-' * 40}",
-                    "# Info: Use object.tables, object.statistics, object.variables or object.cubes to get all results.",
+                    "# Use object.tables, object.statistics, object.variables or object.cubes to get all results.",
                     f"{'-' * 40}",
                 ]
             )
