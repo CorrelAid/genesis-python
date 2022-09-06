@@ -41,7 +41,7 @@ def get_response_from_endpoint(
     # if the response requires starting a job, automatically do so
     try:
         # test for job-relevant status code and catch possible error
-        response_status_code = response.json().get("Status").get("Code", -1)
+        response_status_code = response.json().get("Status").get("Code")
         if response_status_code == 98:
             new_params = _jobs_params(params)
             if type(new_params) == dict:
@@ -162,8 +162,14 @@ def _jobs_process(
     # set timeout of 90 seconds from now
     timeout = time.time() + timeperiod
     while (
-        catalogue_state not in ["Fertig", "finished"] and time.time() < timeout
+        time.time() < timeout
     ):
+        time.sleep(20)
+        logger.info(
+            "Der Endpunkt catalogue/jobs wurde mit der ID %s angesprochen. Der Status ist: %d",
+            job_id,
+            catalogue_state,
+        )
         catalogue_response = get_response_from_endpoint(
             "catalogue", "jobs?", params
         )
@@ -171,15 +177,11 @@ def _jobs_process(
             catalogue_state = (
                 catalogue_response.json().get("List")[-1].get("State")
             )
+            break
         else:
             # find the correct job in list
             pass
-        time.sleep(20)
-        logger.info(
-            "Der Endpunkt catalogue/jobs wurde mit der ID %s angesprochen. Der Status ist: %d",
-            job_ID,
-            catalogue_state,
-        )
+
 
     # download the data if job finished successfully
     if catalogue_state in ["Fertig", "finished"]:
@@ -202,6 +204,8 @@ def _jobs_process(
         )
 
         return failed_response
+
+    #def
 
 
 def _check_invalid_status_code(status_code: int) -> None:
