@@ -188,6 +188,10 @@ class Find:
         tables (Results): Tables that match with the query.
         variables (Results): Variables that match with the query.
         cubes (Results): Cubes that match with the query.
+
+    Methods:
+        run(): Queries the API and prints summary.
+        summary(): Prints summary of all results.
     """
 
     def __init__(self, query: str, top_n_preview: int = 5) -> None:
