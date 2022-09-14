@@ -184,6 +184,10 @@ class Find:
 
     Attributes:
         query (str): The query that is provided to find endpoint.
+        statistics (Results): Statistics that match with the query.
+        tables (Results): Tables that match with the query.
+        variables (Results): Variables that match with the query.
+        cubes (Results): Cubes that match with the query.
     """
 
     def __init__(self, query: str, top_n_preview: int = 5) -> None:
@@ -192,12 +196,6 @@ class Find:
         Args:
             query (str): The query that is provided to find endpoint.
             top_n_preview (int): Number of previews in print summary.
-
-        Returns:
-            summary: prints number of search results and firsts results
-            self.statistics: Statistics that match with the query.
-            self.tables: Tables that match with the query.
-            self.variables: Variables that match with the query.
         """
         self.query = query
 
