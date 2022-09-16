@@ -5,7 +5,7 @@ from typing import List
 
 import pandas as pd
 
-from pygenesis.http_helper import get_data_from_endpoint
+from pygenesis.http_helper import load_data
 
 
 class Cube:
@@ -38,17 +38,17 @@ class Cube:
 
         params |= kwargs
 
-        raw_data = get_data_from_endpoint(
-            endpoint="data", method="cubefile", params=params
+        raw_data = load_data(
+            endpoint="data", method="cubefile", params=params, as_json=False
         )
         self.raw_data = raw_data
         self.cube = assign_correct_types(rename_axes(parse_cube(raw_data)))
         self.data = self.cube["QEI"]
 
-        raw_data = get_data_from_endpoint(
-            endpoint="metadata", method="cube", params=params
+        metadata = load_data(
+            endpoint="metadata", method="cube", params=params, as_json=True
         )
-        self.metadata = json.loads(raw_data)
+        self.metadata = metadata
 
 
 def parse_cube(data: str) -> dict:

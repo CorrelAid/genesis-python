@@ -1,18 +1,53 @@
 """Wrapper module for the data endpoint."""
 import json
 import logging
+from pathlib import Path
+from typing import Union
 
 import requests
 
-from pygenesis.cache import cache_data_from_response
+from pygenesis.cache import cache_data, hit_in_cash, read_from_cache
 from pygenesis.config import load_config
 from pygenesis.custom_exceptions import DestatisStatusError
 
 logger = logging.getLogger(__name__)
 
 
-@cache_data_from_response
-def get_data_from_endpoint(*, endpoint: str, method: str, params: dict) -> str:
+def load_data(
+    endpoint: str, method: str, params: dict, as_json: bool = False
+) -> Union[str, dict]:
+    """Load data identified by endpoint, method and params.
+
+    Either load data from cache (previous download) or from Destatis.
+
+    Args:
+        endpoint (str): The endpoint for this data request.
+        method (str): The method for this data request.
+        params (dict): The dictionary holding the params for this data request.
+        as_json (bool, optional): If True, result will be parsed as JSON. Defaults to False.
+
+    Returns:
+        Union[str, dict]: The data as raw text or JSON dict.
+    """
+    config = load_config()
+    cache_dir = Path(config["DATA"]["cache_dir"])
+    name = params.get("name")
+
+    if hit_in_cash(cache_dir, name, endpoint, method, params):
+        data = read_from_cache(cache_dir, name, endpoint, method, params)
+    else:
+        data = get_data_from_endpoint(endpoint, method, params)
+
+        if endpoint == "data":
+            cache_data(cache_dir, name, endpoint, method, params, data)
+
+    if as_json:
+        return json.loads(data)
+    else:
+        return data
+
+
+def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
     """
     Wrapper method which constructs a url for querying data from Destatis and
     sends a GET request.
@@ -28,15 +63,16 @@ def get_data_from_endpoint(*, endpoint: str, method: str, params: dict) -> str:
     config = load_config()
     url = f"{config['GENESIS API']['base_url']}{endpoint}/{method}"
 
-    params.update(
+    # params is used to calculate hash for caching so don't alter params dict here!
+    params_ = params.copy()
+    params_.update(
         {
             "username": config["GENESIS API"]["username"],
             "password": config["GENESIS API"]["password"],
         }
     )
 
-    response = requests.get(url, params=params, timeout=(1, 15))
-
+    response = requests.get(url, params=params_, timeout=(1, 15))
     response.encoding = "UTF-8"
 
     _check_invalid_status_code(response.status_code)

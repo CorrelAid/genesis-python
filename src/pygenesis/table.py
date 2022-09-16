@@ -4,7 +4,7 @@ from io import StringIO
 
 import pandas as pd
 
-from pygenesis.http_helper import get_data_from_endpoint
+from pygenesis.http_helper import load_data
 
 
 class Table:
@@ -35,14 +35,14 @@ class Table:
 
         params |= kwargs
 
-        raw_data = get_data_from_endpoint(
-            endpoint="data", method="tablefile", params=params
+        raw_data = load_data(
+            endpoint="data", method="tablefile", params=params, as_json=False
         )
         self.raw_data = raw_data
         data_str = StringIO(raw_data)
         self.data = pd.read_csv(data_str, sep=";")
 
-        raw_data = get_data_from_endpoint(
-            endpoint="metadata", method="table", params=params
+        metadata = load_data(
+            endpoint="metadata", method="table", params=params, as_json=True
         )
-        self.metadata = json.loads(raw_data)
+        self.metadata = metadata
