@@ -97,6 +97,18 @@ def test_hit_cache(cache_dir, params):
     )
 
 
+def test_change_in_params(cache_dir, params):
+    params_ = params.copy()
+
+    name = "test-change-in-params"
+    assert not hit_in_cash(cache_dir, name, "data", name, params_)
+    cache_data(cache_dir, name, "data", name, params_, "test")
+    assert hit_in_cash(cache_dir, name, "data", name, params_)
+
+    params_.update({"new-param": 2})
+    assert not hit_in_cash(cache_dir, name, "data", name, params_)
+
+
 def test_clean_cache(cache_dir, params):
     name = "test-clean-cache"
     cache_data(cache_dir, name, "data", name, params, "test")
