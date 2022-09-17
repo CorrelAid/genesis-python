@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def cache_data(
     cache_dir: Path,
-    name: str,
+    name: Optional[str],
     endpoint: str,
     method: str,
     params: dict,
@@ -36,6 +36,9 @@ def cache_data(
         data (str): The actual raw text data as returned by GENESIS-Online.
     """
     # pylint: disable=too-many-arguments
+    if name is None:
+        return
+
     data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
     file_name = f"{str(date.today()).replace('-', '')}.txt"
 
@@ -61,7 +64,11 @@ def cache_data(
 
 
 def read_from_cache(
-    cache_dir: Path, name: str, endpoint: str, method: str, params: dict
+    cache_dir: Path,
+    name: Optional[str],
+    endpoint: str,
+    method: str,
+    params: dict,
 ) -> str:
     """Read and return compressed data from cache.
 
@@ -75,6 +82,9 @@ def read_from_cache(
     Returns:
         str: The uncompressed raw text data.
     """
+    if name is None:
+        return ""
+
     data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
 
     versions = sorted(
@@ -99,7 +109,11 @@ def _build_file_path(
 
 
 def hit_in_cash(
-    cache_dir: Path, name: str, endpoint: str, method: str, params: dict
+    cache_dir: Path,
+    name: Optional[str],
+    endpoint: str,
+    method: str,
+    params: dict,
 ) -> bool:
     """Check if data is already cached.
 
@@ -113,6 +127,9 @@ def hit_in_cash(
     Returns:
         bool: True, if combination of name, endpoint, method and params is already cached.
     """
+    if name is None:
+        return False
+
     data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
     return data_dir.exists()
 

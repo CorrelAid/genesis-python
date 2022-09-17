@@ -37,6 +37,7 @@ class Table:
         raw_data = load_data(
             endpoint="data", method="tablefile", params=params, as_json=False
         )
+        assert isinstance(raw_data, str)
         self.raw_data = raw_data
         data_str = StringIO(raw_data)
         self.data = pd.read_csv(data_str, sep=";")
@@ -44,4 +45,5 @@ class Table:
         metadata = load_data(
             endpoint="metadata", method="table", params=params, as_json=True
         )
+        assert isinstance(metadata, dict)
         self.metadata = metadata

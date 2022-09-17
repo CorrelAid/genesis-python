@@ -33,10 +33,8 @@ def load_data(
     cache_dir = Path(config["DATA"]["cache_dir"])
     name = params.get("name")
 
-    if endpoint == "data":
-        if hit_in_cash(cache_dir, name, endpoint, method, params):
-            data = read_from_cache(cache_dir, name, endpoint, method, params)
-
+    if hit_in_cash(cache_dir, name, endpoint, method, params):
+        data = read_from_cache(cache_dir, name, endpoint, method, params)
     else:
         data = get_data_from_endpoint(endpoint, method, params)
 
@@ -44,7 +42,8 @@ def load_data(
             cache_data(cache_dir, name, endpoint, method, params, data)
 
     if as_json:
-        return json.loads(data)
+        parsed_data: dict = json.loads(data)
+        return parsed_data
     else:
         return data
 

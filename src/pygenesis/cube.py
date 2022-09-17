@@ -40,6 +40,7 @@ class Cube:
         raw_data = load_data(
             endpoint="data", method="cubefile", params=params, as_json=False
         )
+        assert isinstance(raw_data, str)
         self.raw_data = raw_data
         self.cube = assign_correct_types(rename_axes(parse_cube(raw_data)))
         self.data = self.cube["QEI"]
@@ -47,6 +48,7 @@ class Cube:
         metadata = load_data(
             endpoint="metadata", method="cube", params=params, as_json=True
         )
+        assert isinstance(metadata, dict)
         self.metadata = metadata
 
 

@@ -170,6 +170,7 @@ class Results:
         response = load_data(
             endpoint="metadata", method=category, params=params, as_json=True
         )
+        assert isinstance(response, dict)
 
         return response
 
@@ -272,6 +273,7 @@ class Find:
         response = load_data(
             endpoint="find", method="find", params=params, as_json=True
         )
+        assert isinstance(response, dict)
         response_dict = response[category.capitalize()]
         response_df = pd.DataFrame(response_dict).replace("\n", " ", regex=True)
 
