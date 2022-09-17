@@ -5,7 +5,6 @@ import logging
 import shutil
 import zipfile
 from datetime import date
-from hmac import digest
 from pathlib import Path
 from typing import Optional
 

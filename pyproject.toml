@@ -5,7 +5,7 @@ name = "pygenesis"
 version = "0.1.0"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 requests = "^2.27.1"
 pandas = "^1.4.3"
 tabulate = "^0.8.10"
