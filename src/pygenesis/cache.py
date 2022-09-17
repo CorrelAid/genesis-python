@@ -5,6 +5,7 @@ import logging
 import shutil
 import zipfile
 from datetime import date
+from hmac import digest
 from pathlib import Path
 from typing import Optional
 
@@ -103,10 +104,10 @@ def read_from_cache(
 def _build_file_path(
     cache_dir: Path, name: str, endpoint: str, method: str, params: dict
 ) -> Path:
-    params_hash = hashlib.md5(
-        json.dumps(params).encode("UTF-8"), usedforsecurity=False
-    ).hexdigest()
-    data_dir = cache_dir / name / endpoint / method / params_hash
+    params_hash = hashlib.blake2s(digest_size=10, usedforsecurity=False)
+    params_hash.update(json.dumps(params).encode("UTF-8"))
+    data_dir = cache_dir / name / endpoint / method / params_hash.hexdigest()
+
     return data_dir
 
 
