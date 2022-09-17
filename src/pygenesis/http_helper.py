@@ -1,10 +1,10 @@
 """Wrapper module for the data endpoint."""
 import json
 import logging
-import select
 import sys
 import time
 import warnings
+from select import select
 
 import requests
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 @cache_data_from_response
 def get_data_from_endpoint(*, endpoint: str, method: str, params: dict) -> str:
     """
-    Wrapper method which constructs a url for querying data from Destatis and
+    Wrapper method which constructs an url for querying data from Destatis and
     sends a GET request.
 
     Args:
@@ -49,10 +49,15 @@ def get_data_from_endpoint(*, endpoint: str, method: str, params: dict) -> str:
         if response_status_code == 98:
             new_params = _jobs_params(params)
             if type(new_params) == dict:
-                jobs_response = get_response_from_endpoint(
-                    endpoint, method, new_params
+                jobs_response = get_data_from_endpoint(
+                    endpoint=endpoint, method=method, params=new_params
                 )
-                response = _jobs_process(jobs_response, params)
+                jobs_catalogue_params, job_id = _jobs_job_id(
+                    jobs_response, params
+                )
+                response = _jobs_catalogue_process(
+                    jobs_catalogue_params, job_id
+                )
     except json.decoder.JSONDecodeError:
         pass
 
@@ -97,26 +102,22 @@ def _generic_status_dict(
     return request_status
 
 
-# TODO: test schreiben (mit automatic y/n) - oder aber y/n entfernen
-def _jobs_params(params: dict, timeperiod: float = 15) -> requests.Response:
+def _jobs_params(params: dict) -> dict:
     """
     Helper method which handles too large data requests with option of starting a job.
 
     Args:
-        response_status_code (int): Status code from the response object with job
         params (dict): dictionary of query parameters
-        endpoint (str): Destatis endpoint (eg. data, catalogue, ..)
-        method (str): Destatis method (eg. cube, tablefile, ...)
 
     Returns:
-        requests.Response: the response from Destatis
+        dict: new dict to start a job
     """
     # matching cases for user inputs
     positive = ["ja", "j", "y", "yes"]
     negative = ["nein", "n", "no"]
 
-    job_bool = [""]
-    while job_bool[0].lower() not in positive + negative:
+    job_bool = ""
+    while job_bool.lower() not in positive + negative:
         # get user input whether to start a job
         logger.warning(
             "Die Daten sind zu groß um direkt abgerufen zu werden."
@@ -125,8 +126,8 @@ def _jobs_params(params: dict, timeperiod: float = 15) -> requests.Response:
             + "\n Sollen wir einen Job starten?"
             + "\n Ja/Nein:"
         )
-        job_bool, o, e = select.select([sys.stdin], [], [], timeperiod)
-        if not job_bool:
+        job_bool = input("Sollen wir einen Job starten? \n Ja/Nein")
+        if job_bool.lower() not in (positive + negative):
             logger.warning(
                 "Keinen Input erhalten, es wird kein Job angestoßen."
             )
@@ -142,29 +143,53 @@ def _jobs_params(params: dict, timeperiod: float = 15) -> requests.Response:
         return negative_response
 
     # retry request with job parameter set to True
-    params |= {"job": "true"}
+    params.update({"job": "true"})
     return params
 
 
-def _jobs_process(
-    response: requests.Response, params: dict, timeperiod: float = 90
-):
+def _jobs_job_id(response: requests.Response, params: dict) -> dict:
+    """
+    Helper method which handles too large data requests and gives access to job id.
 
+    Args:
+        params (dict): dictionary of query parameters
+        response (requests.Response): Response from endpoint request with job set equal true
+
+    Returns:
+        dict: new dict to observe status of job in catalogue
+    """
     # receive status from response
-    job_true_response = response.json()
+    job_true_response = json.loads(response)
     assert (
         job_true_response.get("Status").get("Code") == 99
     ), "Unexpected status code when automatically starting a job!"
+
     s = job_true_response.get("Status").get("Content")
     job_id = s.split(":")[1].strip()
     logger.info("Der Job wurde angestoßen mit der ID: %s", job_id)
 
-    # check job status via catalogue
-    params |= {"sortcriterion": "time"}
-    catalogue_state = None
+    # new params to check job status via catalogue
+    params.update({"selection": f"*{job_id}*"})
+    return params, job_id
 
-    # set timeout of 90 seconds from now
+
+def _jobs_catalogue_process(
+    params: dict, job_id: str, timeperiod: float = 90
+) -> json:
+    """
+    Helper method which checks the status of job in catalogue endpoint and returns final data.
+
+    Args:
+        params (dict): dictionary of query parameters
+        job_id (str): string of job_id for catalogue endpoint
+        timeperiod (float): optional float for timeout
+
+    Returns:
+        json: json of requested data
+    """
+    # while loop timeout after 'timeperiod'
     timeout = time.time() + timeperiod
+    catalogue_state = None
     while time.time() < timeout:
         time.sleep(20)
         logger.info(
@@ -172,30 +197,28 @@ def _jobs_process(
             job_id,
             catalogue_state,
         )
-        catalogue_response = get_response_from_endpoint(
-            "catalogue", "jobs?", params
-        )
-        if catalogue_response.json().get("List")[-1].get("Code") == job_id:
-            catalogue_state = (
-                catalogue_response.json().get("List")[-1].get("State")
+        catalogue_response = json.loads(
+            get_data_from_endpoint(
+                endpoint="catalogue", method="jobs", params=params
             )
+        )
+        catalogue_state = catalogue_response.get("List")[-1].get("State")
+        if catalogue_state in ["Fertig", "finished"]:
             break
-        else:
-            # find the correct job in list
-            pass
 
     # download the data if job finished successfully
     if catalogue_state in ["Fertig", "finished"]:
         params_resultfile = {
             "name": job_id,
+            "sortcriterion": "date",
             "area": "all",
             "language": "de",
         }
-        result = get_response_from_endpoint(
-            "data", "resultfile?", params_resultfile
+        result = get_data_from_endpoint(
+            endpoint="data", method="resultfile", params=params_resultfile
         )
-
-        return result
+        print(result)
+        return json.loads(result)
 
     else:
         failed_response = _generic_status_dict(
@@ -205,8 +228,6 @@ def _jobs_process(
         )
 
         return failed_response
-
-    # def
 
 
 def _check_invalid_status_code(status_code: int) -> None:

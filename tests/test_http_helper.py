@@ -18,6 +18,7 @@ def _generic_request_status(
     status_response: bool = True,
     code: int = 0,
     status_type: str = "Information",
+    status_content: str = "Erfolg/ Success/ Some Issue",
 ) -> requests.Response:
     """
     Helper method which allows to create a generic request.Response that covers all Destatis answers
@@ -38,14 +39,14 @@ def _generic_request_status(
         },
         "Status": {
             "Code": code,
-            "Content": "Erfolg/ Success/ Some Issue",
+            "Content": status_content,
             "Type": status_type,
         },
     }
 
     response_text = "Some text for a successful response without status..."
 
-    # set up generic requests.Reponse
+    # set up generic requests.Response
     request_status = requests.Response()
     request_status.status_code = 200  # success
 
@@ -188,7 +189,7 @@ def test__jobs_params_no_user_input(monkeypatch):
     assert new_params.status_code == 42
 
 
-def test__check_jobs_params_all_successful_user_input(monkeypatch):
+def test__jobs_params_all_successful_user_input(monkeypatch):
     """
     Basic tests to check the successful user input.
     Testing positive input for starting a job and negative input for not starting the job.
@@ -202,3 +203,17 @@ def test__check_jobs_params_all_successful_user_input(monkeypatch):
             assert new_params.get("job") == "true"
         if type(new_params) == requests.models.Response:
             assert new_params.status_code == 42
+
+
+def test__jobs_job_id_get_id():
+    status_content = "Der Bearbeitungsauftrag wurde erstellt. Die Tabelle kann in Kürze als Ergebnis mit folgendem Namen abgerufen werden: 42151-0001_976196443"
+    response = _generic_request_status(True, 99, "Information", status_content)
+    print(response)
+
+
+def test__jobs_job_id_no_id():
+    pass
+
+
+def test__jobs_job_id_code_error():
+    pass
