@@ -103,7 +103,9 @@ def read_from_cache(
 def _build_file_path(
     cache_dir: Path, name: str, endpoint: str, method: str, params: dict
 ) -> Path:
-    params_hash = hashlib.md5(json.dumps(params).encode("UTF-8")).hexdigest()
+    params_hash = hashlib.md5(
+        json.dumps(params).encode("UTF-8"), usedforsecurity=False
+    ).hexdigest()
     data_dir = cache_dir / name / endpoint / method / params_hash
     return data_dir
 
