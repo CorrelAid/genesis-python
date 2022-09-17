@@ -1,6 +1,5 @@
 """Module provides functionality to parse cubefile data provided by GENESIS."""
 import copy
-import json
 from typing import List
 
 import pandas as pd

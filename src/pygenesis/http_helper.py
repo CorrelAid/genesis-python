@@ -33,8 +33,10 @@ def load_data(
     cache_dir = Path(config["DATA"]["cache_dir"])
     name = params.get("name")
 
-    if hit_in_cash(cache_dir, name, endpoint, method, params):
-        data = read_from_cache(cache_dir, name, endpoint, method, params)
+    if endpoint == "data":
+        if hit_in_cash(cache_dir, name, endpoint, method, params):
+            data = read_from_cache(cache_dir, name, endpoint, method, params)
+
     else:
         data = get_data_from_endpoint(endpoint, method, params)
 
@@ -72,7 +74,7 @@ def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
         }
     )
 
-    response = requests.get(url, params=params_, timeout=(1, 15))
+    response = requests.get(url, params=params_, timeout=(5, 15))
     response.encoding = "UTF-8"
 
     _check_invalid_status_code(response.status_code)

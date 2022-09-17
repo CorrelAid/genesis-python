@@ -36,7 +36,7 @@ def cache_data(
         data (str): The actual raw text data as returned by GENESIS-Online.
     """
     # pylint: disable=too-many-arguments
-    data_dir = build_file_path(cache_dir, name, endpoint, method, params)
+    data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
     file_name = f"{str(date.today()).replace('-', '')}.txt"
 
     # create parent dirs, if necessary
@@ -70,12 +70,12 @@ def read_from_cache(
         name (str): The unique identifier in GENESIS-Online.
         endpoint (str): The endpoint for this data request.
         method (str): The method for this data request.
-        params (dict): The dictionary holding the params for this data re
+        params (dict): The dictionary holding the params for this data request.
 
     Returns:
         str: The uncompressed raw text data.
     """
-    data_dir = build_file_path(cache_dir, name, endpoint, method, params)
+    data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
 
     versions = sorted(
         data_dir.glob("*"),
@@ -90,7 +90,7 @@ def read_from_cache(
     return data
 
 
-def build_file_path(
+def _build_file_path(
     cache_dir: Path, name: str, endpoint: str, method: str, params: dict
 ) -> Path:
     params_hash = hashlib.md5(json.dumps(params).encode("UTF-8")).hexdigest()
@@ -101,7 +101,19 @@ def build_file_path(
 def hit_in_cash(
     cache_dir: Path, name: str, endpoint: str, method: str, params: dict
 ) -> bool:
-    data_dir = build_file_path(cache_dir, name, endpoint, method, params)
+    """Check if data is already cached.
+
+    Args:
+        cache_dir (Path): The cash directory as configured in the config.
+        name (str): The unique identifier in GENESIS-Online.
+        endpoint (str): The endpoint for this data request.
+        method (str): The method for this data request.
+        params (dict): The dictionary holding the params for this data request.
+
+    Returns:
+        bool: True, if combination of name, endpoint, method and params is already cached.
+    """
+    data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
     return data_dir.exists()
 
 
@@ -119,6 +131,8 @@ def clear_cache(name: Optional[str] = None) -> None:
     file_paths = [cache_dir / name] if name is not None else cache_dir.iterdir()
 
     for file_path in file_paths:
+        print(file_path)
+        print(list(file_path.glob("*")))
         # delete if file or symlink, otherwise remove complete tree
         try:
             if file_path.is_file() or file_path.is_symlink():

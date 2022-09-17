@@ -1,10 +1,7 @@
 """Implements find endpoint to retrieve results based on query"""
-
-import json
-
 import pandas as pd
 
-from pygenesis.http_helper import get_data_from_endpoint
+from pygenesis.http_helper import load_data
 
 pd.set_option("max_colwidth", None)
 pd.set_option("expand_frame_repr", False)
@@ -156,7 +153,7 @@ class Results:
             print(output)
 
     @staticmethod
-    def _get_metadata_results(category: str, code: str):
+    def _get_metadata_results(category: str, code: str) -> dict:
         """
         Based on the category and code query parameters the metadata will be generated.
 
@@ -170,12 +167,11 @@ class Results:
             "name": code,
         }
 
-        response = get_data_from_endpoint(
-            endpoint="metadata", method=category, params=params
+        response = load_data(
+            endpoint="metadata", method=category, params=params, as_json=True
         )
-        response_json = json.loads(response)
 
-        return response_json
+        return response
 
 
 class Find:
@@ -273,10 +269,10 @@ class Find:
 
         params |= kwargs
 
-        response = get_data_from_endpoint(
-            endpoint="find", method="find", params=params
+        response = load_data(
+            endpoint="find", method="find", params=params, as_json=True
         )
-        response_dict = json.loads(response)[category.capitalize()]
+        response_dict = response[category.capitalize()]
         response_df = pd.DataFrame(response_dict).replace("\n", " ", regex=True)
 
         return Results(response_df, category)

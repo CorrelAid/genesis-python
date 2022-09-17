@@ -1,5 +1,4 @@
 """Module contains business logic related to destatis tables."""
-import json
 from io import StringIO
 
 import pandas as pd
