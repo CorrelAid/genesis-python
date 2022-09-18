@@ -31,7 +31,7 @@ def test_password(mock_config, mock_requests, mock_config_dir, cache_dir):
     }
     mock_config.return_value = config
     mock_requests.return_value = _generic_request_status()
-    mock_config_dir.return_value = cache_dir
+    mock_config_dir.return_value = cache_dir / "config.ini"
 
     password("new_password")
 
