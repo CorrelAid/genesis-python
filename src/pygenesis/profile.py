@@ -29,10 +29,9 @@ def password(new_password: str) -> str:
         config["GENESIS API"]["password"]
     except KeyError as e:
         raise KeyError(
-            e,
             "Password not found in config! Please make sure \
             init_config() was run properly & your user data is set correctly!",
-        )
+        ) from e
 
     # change remote password
     response_text = get_data_from_endpoint(
