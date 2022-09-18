@@ -1,5 +1,3 @@
-from configparser import ConfigParser
-
 from mock import patch
 
 from pygenesis.helloworld import logincheck, whoami

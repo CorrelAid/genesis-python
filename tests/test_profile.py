@@ -29,5 +29,29 @@ def test_password(mock_config, mock_requests, mock_config_dir, cache_dir):
     password("new_password")
 
 
-def test_remove_results():
-    pass
+@patch("pygenesis.profile.get_config_path_from_settings")
+@patch("pygenesis.profile.get_data_from_endpoint")
+@patch("pygenesis.profile.load_config")
+def test_password_keyerror(
+    mock_config, mock_requests, mock_config_dir, cache_dir
+):
+    # define empty config (no password)
+    config = ConfigParser()
+    mock_config.return_value = config["GENESIS API"] = {}
+    mock_requests.return_value = _generic_request_status()
+    mock_config_dir.return_value = cache_dir
+
+    with pytest.raises(KeyError) as e:
+        password("new_password")
+    assert (
+        "Password not found in config! Please make sure \
+            init_config() was run properly & your user data is set correctly!"
+        in str(e.value)
+    )
+
+
+@patch("pygenesis.profile.get_data_from_endpoint")
+def test_remove_result(mock_requests):
+    mock_requests.return_value = _generic_request_status()
+
+    remove_result("11111-0001")

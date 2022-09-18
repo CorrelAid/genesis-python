@@ -8,7 +8,7 @@ from pygenesis.config import (
 from pygenesis.http_helper import get_data_from_endpoint
 
 
-def password(new_password: str):
+def password(new_password: str) -> str:
     """
     Changes Genesis REST-API password and updates local config.
 
@@ -35,7 +35,9 @@ def password(new_password: str):
         )
 
     # change remote password
-    response_text = get_data_from_endpoint("profile", "password", params)
+    response_text = get_data_from_endpoint(
+        endpoint="profile", method="password", params=params
+    )
     # change local password
     config["GENESIS API"]["password"] = new_password
     _write_config(config, get_config_path_from_settings())
@@ -43,5 +45,23 @@ def password(new_password: str):
     return response_text
 
 
-def remove_result():
-    pass
+def remove_result(name: str, area: str = "all") -> str:
+    """
+    Remove 'Ergebnistabellen' from the the permission space 'area'.
+    Should only apply for manually saved data, visible in 'Meine Tabellen' in the Web Interface.
+
+    Args:
+        name (str): 'Ergebnistabelle' to be removed
+        area (str): permission area in which the 'Ergebnistabelle' resides
+
+    Returns:
+        str: text response from Destatis
+    """
+    params = {"name": name, "area": area}
+
+    # remove 'Ergebnistabelle' with previously defined parameters
+    response_text = get_data_from_endpoint(
+        endpoint="profile", method="removeresult?", params=params
+    )
+
+    return response_text
