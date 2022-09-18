@@ -6,7 +6,7 @@ import pytest
 from mock import patch
 
 from pygenesis.profile import password, remove_result
-from tests.test_http_helper import _generic_request_status, mock_config_dict
+from tests.test_http_helper import _generic_request_status
 
 
 @pytest.fixture()
@@ -22,7 +22,14 @@ def cache_dir(tmp_path_factory):
 @patch("pygenesis.profile.get_data_from_endpoint")
 @patch("pygenesis.profile.load_config")
 def test_password(mock_config, mock_requests, mock_config_dir, cache_dir):
-    mock_config.return_value = mock_config_dict()
+    # mock configparser to be able to test writing of new password
+    config = ConfigParser()
+    config["GENESIS API"] = {
+        "base_url": "mocked_url",
+        "username": "JaneDoe",
+        "password": "password",
+    }
+    mock_config.return_value = config
     mock_requests.return_value = _generic_request_status()
     mock_config_dir.return_value = cache_dir
 
@@ -36,8 +43,7 @@ def test_password_keyerror(
     mock_config, mock_requests, mock_config_dir, cache_dir
 ):
     # define empty config (no password)
-    config = ConfigParser()
-    mock_config.return_value = config["GENESIS API"] = {}
+    mock_config.return_value = {"GENESIS API": {}}
     mock_requests.return_value = _generic_request_status()
     mock_config_dir.return_value = cache_dir
 

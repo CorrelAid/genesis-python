@@ -1,6 +1,5 @@
 import json
 import logging
-from configparser import ConfigParser
 
 import pytest
 import requests
@@ -58,17 +57,6 @@ def _generic_request_status(
     return request_status
 
 
-def mock_config_dict() -> ConfigParser:
-    config = ConfigParser()
-    config["GENESIS API"] = {
-        "base_url": "mocked_url",
-        "username": "JaneDoe",
-        "password": "password",
-    }
-
-    return config
-
-
 @patch("requests.get")
 @patch("pygenesis.http_helper.load_config")
 def test_get_response_from_endpoint(mock_config, mock_requests):
@@ -76,7 +64,13 @@ def test_get_response_from_endpoint(mock_config, mock_requests):
     Test once with generic API response, more detailed tests
     of subfunctions and specific cases below.
     """
-    mock_config.return_value = mock_config_dict()
+    mock_config.return_value = {
+        "GENESIS API": {
+            "base_url": "mocked_url",
+            "username": "JaneDoe",
+            "password": "password",
+        }
+    }
     mock_requests.return_value = _generic_request_status()
 
     get_data_from_endpoint(endpoint="endpoint", method="method", params={})

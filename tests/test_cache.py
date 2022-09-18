@@ -105,6 +105,17 @@ def test_cache_data_twice(cache_dir, caplog):
         assert "Data was successfully cached under" not in caplog.text
 
 
+def test_cache_for_non_data_functions(cache_dir):
+    init_config(cache_dir)
+
+    name = "test_cache_for_non_data"
+    _ = decorated_data(
+        endpoint="metadata", method="test", params={"name": name}
+    )
+
+    assert list(cache_dir.joinpath("data").glob("*")) == []
+
+
 def test_clean_cache(cache_dir):
     init_config(cache_dir)
 
