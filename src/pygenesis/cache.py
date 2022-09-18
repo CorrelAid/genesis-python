@@ -150,8 +150,6 @@ def clear_cache(name: Optional[str] = None) -> None:
     file_paths = [cache_dir / name] if name is not None else cache_dir.iterdir()
 
     for file_path in file_paths:
-        print(file_path)
-        print(list(file_path.glob("*")))
         # delete if file or symlink, otherwise remove complete tree
         try:
             if file_path.is_file() or file_path.is_symlink():
