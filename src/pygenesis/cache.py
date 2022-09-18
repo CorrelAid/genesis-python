@@ -1,79 +1,139 @@
 """Module provides functions/decorators to cache downloaded data as well as remove cached data."""
+import hashlib
+import json
 import logging
 import shutil
 import zipfile
 from datetime import date
-from functools import wraps
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
 
 from pygenesis.config import load_config
 
 logger = logging.getLogger(__name__)
 
 
-def cache_data_from_response(func: Callable[..., str]) -> Callable[..., str]:
-    """Store downloaded data on disk with download time as parent folder.
+def cache_data(
+    cache_dir: Path,
+    name: Optional[str],
+    endpoint: str,
+    method: str,
+    params: dict,
+    data: str,
+) -> None:
+    """Compress and archive data within the configured cache directory.
+
+    Data will be stored in a zip file within the cache directory.
+    The folder structure will be `<name>/<endpoint>/<method>/<hash(params)>.
+    This allows to cache different results for different params.
+
     Args:
-        func (Callable): One of the data methods of the data endpoint.
+        cache_dir (Path): The cash directory as configured in the config.
+        name (str): The unique identifier in GENESIS-Online.
+        endpoint (str): The endpoint for this data request.
+        method (str): The method for this data request.
+        params (dict): The dictionary holding the params for this data request.
+        data (str): The actual raw text data as returned by GENESIS-Online.
     """
+    # pylint: disable=too-many-arguments
+    if name is None:
+        return
 
-    @wraps(func)
-    def wrapper_func(**kwargs) -> str:
-        endpoint = kwargs.get("endpoint")
-        method = kwargs.get("method")
-        genesis_id = kwargs.get("params", {}).get("name")
+    data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
+    file_name = f"{str(date.today()).replace('-', '')}.txt"
 
-        if endpoint is None or method is None or endpoint != "data":
-            return func(**kwargs)
+    # create parent dirs, if necessary
+    file_path = data_dir / file_name
+    file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        config = load_config()
-        cache_dir = Path(config["DATA"]["cache_dir"])
+    # we have to first save the content to a text file, before we can add it to a
+    #   compressed archive, and finally have to delete the file so only the archive remains
+    with open(file_path, "w", encoding="utf-8") as file:
+        file.write(data)
 
-        if not cache_dir.is_dir() or not cache_dir.exists():
-            logger.critical(
-                "Cache dir does not exist! Please make sure init_config() was run properly. Path: %s",
-                cache_dir,
-            )
+    with zipfile.ZipFile(
+        str(file_path).replace(".txt", ".zip"),
+        "w",
+        compression=zipfile.ZIP_DEFLATED,
+        compresslevel=9,
+    ) as myzip:
+        myzip.write(file_path, arcname=file_name)
 
-        data_dir = cache_dir / genesis_id
-        if data_dir.exists():
-            # TODO: Implement solution for updated data.
-            #   So don't return latest version but check first for newer version in GENESIS.
-            # if data_dir exists, there has to be at least one stored version of this data
-            versions = sorted(
-                (p.name for p in data_dir.glob("*")),
-                key=lambda name: int(name.split("_")[0]),
-            )
-            file_name = versions[-1]
-            file_path = data_dir / file_name
-            with zipfile.ZipFile(file_path, "r") as myzip:
-                with myzip.open(file_name.replace(".zip", ".txt")) as file:
-                    data = file.read().decode()
-        else:
-            data = func(**kwargs)
-            file_name = (
-                f"{str(date.today()).replace('-', '')}_{endpoint}_{method}.txt"
-            )
-            file_path = data_dir / file_name
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(file_path, "w", encoding="utf-8") as file:
-                file.write(data)
+    file_path.unlink()
+    logger.info("Data was successfully cached under %s.", file_path)
 
-            with zipfile.ZipFile(
-                str(file_path).replace(".txt", ".zip"),
-                "w",
-                compression=zipfile.ZIP_DEFLATED,
-                compresslevel=9,
-            ) as myzip:
-                myzip.write(file_path, arcname=file_name)
 
-            file_path.unlink()
-            logger.info("Data was successfully cached under %s.", file_path)
+def read_from_cache(
+    cache_dir: Path,
+    name: Optional[str],
+    endpoint: str,
+    method: str,
+    params: dict,
+) -> str:
+    """Read and return compressed data from cache.
 
-        return data
+    Args:
+        cache_dir (Path): The cash directory as configured in the config.
+        name (str): The unique identifier in GENESIS-Online.
+        endpoint (str): The endpoint for this data request.
+        method (str): The method for this data request.
+        params (dict): The dictionary holding the params for this data request.
 
-    return wrapper_func
+    Returns:
+        str: The uncompressed raw text data.
+    """
+    if name is None:
+        return ""
+
+    data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
+
+    versions = sorted(
+        data_dir.glob("*"),
+        key=lambda path: int(path.stem),
+    )
+    file_name = versions[-1].name
+    file_path = data_dir / file_name
+    with zipfile.ZipFile(file_path, "r") as myzip:
+        with myzip.open(file_name.replace(".zip", ".txt")) as file:
+            data = file.read().decode()
+
+    return data
+
+
+def _build_file_path(
+    cache_dir: Path, name: str, endpoint: str, method: str, params: dict
+) -> Path:
+    params_hash = hashlib.blake2s(digest_size=10, usedforsecurity=False)
+    params_hash.update(json.dumps(params).encode("UTF-8"))
+    data_dir = cache_dir / name / endpoint / method / params_hash.hexdigest()
+
+    return data_dir
+
+
+def hit_in_cash(
+    cache_dir: Path,
+    name: Optional[str],
+    endpoint: str,
+    method: str,
+    params: dict,
+) -> bool:
+    """Check if data is already cached.
+
+    Args:
+        cache_dir (Path): The cash directory as configured in the config.
+        name (str): The unique identifier in GENESIS-Online.
+        endpoint (str): The endpoint for this data request.
+        method (str): The method for this data request.
+        params (dict): The dictionary holding the params for this data request.
+
+    Returns:
+        bool: True, if combination of name, endpoint, method and params is already cached.
+    """
+    if name is None:
+        return False
+
+    data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
+    return data_dir.exists()
 
 
 def clear_cache(name: Optional[str] = None) -> None:
@@ -83,15 +143,7 @@ def clear_cache(name: Optional[str] = None) -> None:
         name (str, optional): Unique name to be deleted from cached data.
     """
     config = load_config()
-
-    # check for cache_dir in DATA section of the config.ini
-    try:
-        cache_dir = Path(config["DATA"]["cache_dir"])
-    except KeyError as e:
-        logger.critical(
-            "Cache dir does not exist! Please make sure init_config() was run properly. Error: %s",
-            e,
-        )
+    cache_dir = Path(config["DATA"]["cache_dir"])
 
     # remove specified file (directory) from the data cache
     # or clear complete cache (remove childs, preserve base)

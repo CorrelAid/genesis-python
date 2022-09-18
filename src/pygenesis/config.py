@@ -94,8 +94,6 @@ def load_config() -> ConfigParser:
     config = _load_config(config_file)
 
     if config.has_section("GENESIS API"):
-        logger.info("Config %s was loaded successfully.", config_file)
-
         if not config.get("GENESIS API", "username") or not config.get(
             "GENESIS API", "password"
         ):
