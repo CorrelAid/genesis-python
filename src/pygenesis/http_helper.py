@@ -42,9 +42,8 @@ def get_data_from_endpoint(*, endpoint: str, method: str, params: dict) -> str:
 
     response = requests.get(url, params=params, timeout=(1, 15))
 
-    # if the response requires starting a job, automatically do so
+    # if the response requires starting a job, the user is prompted to decide
     try:
-        # test for job-relevant status code and catch possible error
         response_status_code = response.json().get("Status").get("Code")
         if response_status_code == 98:
             new_params = _jobs_params(params)
