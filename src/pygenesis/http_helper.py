@@ -1,6 +1,7 @@
 """Wrapper module for the data endpoint."""
 import json
 import logging
+import time
 from pathlib import Path
 from typing import Union
 
@@ -74,7 +75,6 @@ def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
     )
 
     response = requests.get(url, params=params_, timeout=(5, 15))
-    response = requests.get(url, params=params, timeout=(1, 15))
 
     # if the response requires starting a job, the user is prompted to decide
     try:
@@ -82,20 +82,16 @@ def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
         if response_status_code == 98:
             new_params = _jobs_params(params)
             if type(new_params) == dict:
-                jobs_response = get_data_from_endpoint(
-                    endpoint=endpoint, method=method, params=new_params
-                )
-                jobs_catalogue_params, job_id = _jobs_job_id(
-                    jobs_response, params
-                )
-                response = _jobs_catalogue_process(
-                    jobs_catalogue_params, job_id
-                )
+                jobs_response = get_data_from_endpoint(endpoint=endpoint, method=method, params=new_params)
+                #jobs_response = load_data(endpoint=endpoint, method=method, params=new_params, as_json=True)
+                jobs_catalogue_params, job_id = _jobs_job_id(jobs_response, params)
+                response = json.loads(_jobs_catalogue_process(jobs_catalogue_params, job_id))
+                print(response)
     except json.decoder.JSONDecodeError:
         pass
 
     response.encoding = "UTF-8"
-
+    print(response.json())
     _check_invalid_status_code(response.status_code)
     _check_invalid_destatis_status_code(response)
 
@@ -193,6 +189,7 @@ def _jobs_job_id(response: requests.Response, params: dict) -> dict:
     """
     # receive status from response
     job_true_response = json.loads(response)
+    #job_true_response = response
     assert (
         job_true_response.get("Status").get("Code") == 99
     ), "Unexpected status code when automatically starting a job!"
@@ -230,11 +227,7 @@ def _jobs_catalogue_process(
             job_id,
             catalogue_state,
         )
-        catalogue_response = json.loads(
-            get_data_from_endpoint(
-                endpoint="catalogue", method="jobs", params=params
-            )
-        )
+        catalogue_response = json.loads(get_data_from_endpoint(endpoint="catalogue", method="jobs", params=params))
         catalogue_state = catalogue_response.get("List")[-1].get("State")
         if catalogue_state in ["Fertig", "finished"]:
             break
@@ -243,15 +236,33 @@ def _jobs_catalogue_process(
     if catalogue_state in ["Fertig", "finished"]:
         params_resultfile = {
             "name": job_id,
-            "sortcriterion": "date",
+            "searchcriterion": "code",
             "area": "all",
             "language": "de",
         }
-        result = get_data_from_endpoint(
-            endpoint="data", method="resultfile", params=params_resultfile
+        #result = get_data_from_endpoint(endpoint="data", method="resultfile", params=params_resultfile)
+        """
+        config = load_config()
+        url = f"{config['GENESIS API']['base_url']}{'data'}/{'resultfile'}"
+        params_resultfile.update(
+            {
+                "username": config["GENESIS API"]["username"],
+                "password": config["GENESIS API"]["password"],
+            }
         )
-        print(result)
-        return json.loads(result)
+        print(job_id)
+        response = requests.get(url, params=params_resultfile, timeout=(5, 15))
+        """
+        #result = json.loads(get_data_from_endpoint(endpoint="data", method="data", params=params_resultfile))
+        #print('Final response:', response.json())
+        #result = load_data(endpoint="data", method="resultfile", params=params_resultfile, as_json=True)
+        print('test1')
+        print(job_id)
+        result = load_data(endpoint="data", method="resultfile", params=params_resultfile)
+        #return json.loads(result)
+        #return result
+        print('test2')
+        #return str(result.text)
 
     else:
         failed_response = _generic_status_dict(
