@@ -1,16 +1,20 @@
-import time
-from datetime import date
+import re
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
 import pytest
 
-from pygenesis.cache import cache_data
+from pygenesis.cache import (
+    _build_file_path,
+    cache_data,
+    clear_cache,
+    hit_in_cash,
+    read_from_cache,
+)
 from pygenesis.config import (
     DEFAULT_SETTINGS_FILE,
     _write_config,
     init_config,
+    load_config,
     load_settings,
 )
 
@@ -19,7 +23,16 @@ SLEEP_TIME = 0.1
 
 @pytest.fixture()
 def cache_dir(tmp_path_factory):
-    return tmp_path_factory.mktemp(".pygenesis")
+    # remove white-space and non-latin characters (issue fo some user names)
+    temp_dir = str(tmp_path_factory.mktemp(".pygenesis"))
+    temp_dir = re.sub(r"[^\x00-\x7f]", r"", temp_dir.replace(" ", ""))
+
+    init_config(temp_dir)
+
+    config = load_config()
+    cache_dir = Path(config["DATA"]["cache_dir"])
+
+    return cache_dir
 
 
 @pytest.fixture(autouse=True)
@@ -29,64 +42,82 @@ def restore_settings():
     _write_config(old_settings, DEFAULT_SETTINGS_FILE)
 
 
-@cache_data
-def decorated_data(*, name):
-    time.sleep(SLEEP_TIME)
-    return pd.DataFrame(
-        np.random.random(size=(10, 5)), columns=["a", "b", "c", "d", "e"]
-    )
+@pytest.fixture(scope="module")
+def params():
+    return {"name": "test-cache", "area": "all"}
 
 
-def test_cache_data_wrapper(cache_dir):
-    init_config(cache_dir)
+def test_build_file_path(cache_dir, params):
+    data_dir = _build_file_path(cache_dir, "test", "data", "test-cache", params)
 
+    assert isinstance(data_dir, Path)
+    assert data_dir.parent == Path(cache_dir) / "test" / "data" / "test-cache"
+    assert data_dir.name.isalnum()
+
+
+def test_cache_data(cache_dir, params):
     assert len(list((cache_dir / "data").glob("*"))) == 0
 
-    data = decorated_data(name="test_cache_decorator")
+    test_data = "test"
+    cache_data(cache_dir, "test-cache", "data", "test-cache", params, test_data)
 
-    assert isinstance(data, pd.DataFrame)
-    assert not data.empty
-
-    cached_data_file: Path = (
-        cache_dir
-        / "data"
-        / "test_cache_decorator"
-        / str(date.today()).replace("-", "")
-        / "test_cache_decorator.xz"
+    data_dir = _build_file_path(
+        cache_dir, "test-cache", "data", "test-cache", params
     )
+
+    assert data_dir.exists() and len(list(data_dir.glob("*.zip"))) == 1
+
+
+def test_read_from_cache(cache_dir, params):
+    test_data = "test read from cache"
+    cache_data(
+        cache_dir,
+        "test-read-cache",
+        "data",
+        "test-read-cache",
+        params,
+        test_data,
+    )
+    data = read_from_cache(
+        cache_dir, "test-read-cache", "data", "test-read-cache", params
+    )
+
+    assert data == test_data
+
+
+def test_hit_cache(cache_dir, params):
+    assert not hit_in_cash(
+        cache_dir, "test-hit-cache", "data", "test-hit-cache", params
+    )
+    cache_data(
+        cache_dir, "test-hit-cache", "data", "test-hit-cache", params, "test"
+    )
+    assert hit_in_cash(
+        cache_dir, "test-hit-cache", "data", "test-hit-cache", params
+    )
+
+
+def test_change_in_params(cache_dir, params):
+    params_ = params.copy()
+
+    name = "test-change-in-params"
+    assert not hit_in_cash(cache_dir, name, "data", name, params_)
+    cache_data(cache_dir, name, "data", name, params_, "test")
+    assert hit_in_cash(cache_dir, name, "data", name, params_)
+
+    params_.update({"new-param": 2})
+    assert not hit_in_cash(cache_dir, name, "data", name, params_)
+
+
+def test_clean_cache(cache_dir, params):
+    name = "test-clean-cache"
+    cache_data(cache_dir, name, "data", name, params, "test")
+
+    data_dir = _build_file_path(cache_dir, name, "data", name, params)
+    cached_data_file = list(data_dir.glob("*.zip"))[0]
 
     assert cached_data_file.exists() and cached_data_file.is_file()
 
-    objs_in_data = [p for p in cache_dir.joinpath("data").glob("*") if p]
+    clear_cache(name=name)
 
-    assert len(objs_in_data) == 1
-    assert objs_in_data[0] == cache_dir / "data" / "test_cache_decorator"
-
-    objs_in_name_dir = [
-        p
-        for p in cache_dir.joinpath("data/test_cache_decorator").glob("*")
-        if p
-    ]
-
-    assert len(objs_in_name_dir) == 1
-    assert objs_in_name_dir[0] == cached_data_file.parent
-
-    restored_data = pd.read_csv(cached_data_file)
-
-    pd.testing.assert_frame_equal(data, restored_data, check_index_type=False)
-
-
-def test_cache_data_twice(cache_dir):
-    init_config(cache_dir)
-
-    load_time = time.perf_counter()
-    data = decorated_data(name="test_cache_decorator")
-    load_time = time.perf_counter() - load_time
-
-    assert load_time >= SLEEP_TIME
-
-    load_time = time.perf_counter()
-    data = decorated_data(name="test_cache_decorator")
-    load_time = time.perf_counter() - load_time
-
-    assert load_time < SLEEP_TIME
+    assert not cached_data_file.exists() and not cached_data_file.is_file()

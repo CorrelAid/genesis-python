@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.9", "3.10"]
         os: [ubuntu-18.04, macOS-latest, windows-latest]
 
     steps:
@@ -73,29 +73,3 @@ jobs:
         run: poetry run safety check
       - name: Run mypy
         run: poetry run mypy src
-  generate-doc:
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: [3.10.2]
-        poetry-version: [1.1.13]
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Run poetry image
-        uses: abatilo/actions-poetry@v2.0.0
-        with:
-          poetry-version: ${{ matrix.poetry-version }}
-      - name: Install dependencies
-        run: poetry install
-      - name: Run pdoc3
-        run: poetry run pdoc3 ./src/pygenesis --html -o docs --skip-errors
-      - name: Archive pdoc3 documentation
-        uses: actions/upload-artifact@v3
-        with:
-          name: pdoc3-html-doc
-          path: docs/**/*.html

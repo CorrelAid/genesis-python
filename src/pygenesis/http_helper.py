@@ -1,25 +1,57 @@
 """Wrapper module for the data endpoint."""
 import json
 import logging
-import select
-import sys
 import time
-import warnings
-from typing import Optional
+from pathlib import Path
+from typing import Union
 
 import requests
 
+from pygenesis.cache import cache_data, hit_in_cash, read_from_cache
 from pygenesis.config import load_config
+from pygenesis.custom_exceptions import DestatisStatusError
 
-config = load_config()
 logger = logging.getLogger(__name__)
 
 
-def get_response_from_endpoint(
-    endpoint: str, method: str, params: dict
-) -> requests.Response:
+def load_data(
+    endpoint: str, method: str, params: dict, as_json: bool = False
+) -> Union[str, dict]:
+    """Load data identified by endpoint, method and params.
+
+    Either load data from cache (previous download) or from Destatis.
+
+    Args:
+        endpoint (str): The endpoint for this data request.
+        method (str): The method for this data request.
+        params (dict): The dictionary holding the params for this data request.
+        as_json (bool, optional): If True, result will be parsed as JSON. Defaults to False.
+
+    Returns:
+        Union[str, dict]: The data as raw text or JSON dict.
     """
-    Wrapper method which constructs a url for querying data from Destatis and
+    config = load_config()
+    cache_dir = Path(config["DATA"]["cache_dir"])
+    name = params.get("name")
+
+    if hit_in_cash(cache_dir, name, endpoint, method, params):
+        data = read_from_cache(cache_dir, name, endpoint, method, params)
+    else:
+        data = get_data_from_endpoint(endpoint, method, params)
+
+        if endpoint == "data":
+            cache_data(cache_dir, name, endpoint, method, params, data)
+
+    if as_json:
+        parsed_data: dict = json.loads(data)
+        return parsed_data
+    else:
+        return data
+
+
+def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
+    """
+    Wrapper method which constructs an url for querying data from Destatis and
     sends a GET request.
 
     Args:
@@ -28,41 +60,50 @@ def get_response_from_endpoint(
         params (dict): dictionary of query parameters
 
     Returns:
-        requests.Response: the response from Destatis
+        str: the raw text response from Destatis.
     """
+    config = load_config()
     url = f"{config['GENESIS API']['base_url']}{endpoint}/{method}"
 
-    params |= {
-        "username": config["GENESIS API"]["username"],
-        "password": config["GENESIS API"]["password"],
-    }
+    # params is used to calculate hash for caching so don't alter params dict here!
+    params_ = params.copy()
+    params_.update(
+        {
+            "username": config["GENESIS API"]["username"],
+            "password": config["GENESIS API"]["password"],
+        }
+    )
 
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params_, timeout=(5, 15))
 
-    # if the response requires starting a job, automatically do so
+    # if the response requires starting a job, the user is prompted to decide
     try:
-        # test for job-relevant status code
-        response_status_code = response.json().get("Status").get("Code", -1)
-
+        response_status_code = response.json().get("Status").get("Code")
         if response_status_code == 98:
             new_params = _jobs_params(params)
 
             # start job if decided by user input
             if type(new_params) == dict:
-                jobs_response = get_response_from_endpoint(
-                    endpoint, method, new_params
+                jobs_response = get_data_from_endpoint(
+                    endpoint=endpoint, method=method, params=new_params
                 )
-                response = _jobs_process(jobs_response, new_params)
-
-    # catch if a non-json response (e.g. successful file download) is received
+                # jobs_response = load_data(endpoint=endpoint, method=method, params=new_params, as_json=True)
+                jobs_catalogue_params, job_id = _jobs_job_id(
+                    jobs_response, params
+                )
+                response = json.loads(
+                    _jobs_catalogue_process(jobs_catalogue_params, job_id)
+                )
+                print(response)
     except json.decoder.JSONDecodeError:
         pass
 
     response.encoding = "UTF-8"
+    print(response.json())
     _check_invalid_status_code(response.status_code)
     _check_invalid_destatis_status_code(response)
 
-    return response
+    return str(response.text)
 
 
 # TODO: test (Marco)
@@ -98,27 +139,21 @@ def _generic_status_dict(
     return request_status
 
 
-# TODO: test schreiben (mit automatic y/n) - oder aber y/n entfernen
-def _jobs_params(params: dict) -> Optional[dict]:
+def _jobs_params(params: dict) -> dict:
     """
     Helper method which handles too large data requests with option of starting a job.
 
     Args:
-        response_status_code (int): Status code from the response object with job
         params (dict): dictionary of query parameters
-        endpoint (str): Destatis endpoint (eg. data, catalogue, ..)
-        method (str): Destatis method (eg. cube, tablefile, ...)
 
     Returns:
-        requests.Response: the response from Destatis
+        dict: new dict to start a job
     """
     # matching cases for user inputs
     positive = ["ja", "j", "y", "yes"]
     negative = ["nein", "n", "no"]
 
-    # define initial input for select
     job_bool = ""
-
     while job_bool.lower() not in positive + negative:
         # get user input whether to start a job
         logger.warning(
@@ -128,11 +163,8 @@ def _jobs_params(params: dict) -> Optional[dict]:
             + "\n Sollen wir einen Job starten?"
             + "\n Ja/Nein:"
         )
-
-        # TODO: Not working for Windows!
-        job_bool = input()
-
-        if not job_bool:
+        job_bool = input("Sollen wir einen Job starten? \n Ja/Nein")
+        if job_bool.lower() not in (positive + negative):
             logger.warning(
                 "Keinen Input erhalten, es wird kein Job angestoßen."
             )
@@ -145,61 +177,70 @@ def _jobs_params(params: dict) -> Optional[dict]:
     else:
         params = None
 
+    # retry request with job parameter set to True
+    params.update({"job": "true"})
     return params
 
 
-def _jobs_process(
-    response: requests.Response, params: dict, timeperiod: float = 90
-) -> requests.Response:
+def _jobs_job_id(response: requests.Response, params: dict) -> dict:
     """
-    Helper method which handles overall job process.
+    Helper method which handles too large data requests and gives access to job id.
 
     Args:
-        response (requests.Response): Response object with {"job": "true"}
         params (dict): dictionary of query parameters
-        timeperiod (float): period until timeout
+        response (requests.Response): Response from endpoint request with job set equal true
 
     Returns:
-        requests.Response: the response from Destatis
+        dict: new dict to observe status of job in catalogue
     """
-    # check status code of the response
-    job_true_response = response.json()
+    # receive status from response
+    job_true_response = json.loads(response)
+    # job_true_response = response
     assert (
         job_true_response.get("Status").get("Code") == 99
     ), "Unexpected status code when automatically starting a job!"
 
-    # check out job_id & inform user
     s = job_true_response.get("Status").get("Content")
     job_id = s.split(":")[1].strip()
     logger.info("Der Job wurde angestoßen mit der ID: %s", job_id)
 
-    # check job status via catalogue
-    params |= {"sortcriterion": "time"}
-    catalogue_state = None
+    # new params to check job status via catalogue
+    params.update({"selection": f"*{job_id}*"})
+    return params, job_id
 
-    # set timeout of 90 seconds from now
+
+def _jobs_catalogue_process(
+    params: dict, job_id: str, timeperiod: float = 90
+) -> json:
+    """
+    Helper method which checks the status of job in catalogue endpoint and returns final data.
+
+    Args:
+        params (dict): dictionary of query parameters
+        job_id (str): string of job_id for catalogue endpoint
+        timeperiod (float): optional float for timeout
+
+    Returns:
+        json: json of requested data
+    """
+    # while loop timeout after 'timeperiod'
     timeout = time.time() + timeperiod
-    while (
-        catalogue_state not in ["Fertig", "finished"] and time.time() < timeout
-    ):
-        # fetch current process status
-        catalogue_response = get_response_from_endpoint(
-            "catalogue", "jobs?", params
-        )
-        # assess that response relates to the current/ last (element [-1]) request
-        if catalogue_response.json().get("List")[-1].get("Code") == job_id:
-            catalogue_state = (
-                catalogue_response.json().get("List")[-1].get("State")
-            )
-        else:
-            pass
-
-        # inform user
+    catalogue_state = None
+    while time.time() < timeout:
+        time.sleep(20)
         logger.info(
             "Der Endpunkt catalogue/jobs wurde mit der ID %s angesprochen. Der Status ist: %d",
             job_id,
             catalogue_state,
         )
+        catalogue_response = json.loads(
+            get_data_from_endpoint(
+                endpoint="catalogue", method="jobs", params=params
+            )
+        )
+        catalogue_state = catalogue_response.get("List")[-1].get("State")
+        if catalogue_state in ["Fertig", "finished"]:
+            break
 
         # wait to allow processing on the server side & try again if not finished
         time.sleep(20)
@@ -208,14 +249,35 @@ def _jobs_process(
     if catalogue_state in ["Fertig", "finished"]:
         params_resultfile = {
             "name": job_id,
+            "searchcriterion": "code",
             "area": "all",
             "language": "de",
         }
-        result = get_response_from_endpoint(
-            "data", "resultfile?", params_resultfile
+        # result = get_data_from_endpoint(endpoint="data", method="resultfile", params=params_resultfile)
+        """
+        config = load_config()
+        url = f"{config['GENESIS API']['base_url']}{'data'}/{'resultfile'}"
+        params_resultfile.update(
+            {
+                "username": config["GENESIS API"]["username"],
+                "password": config["GENESIS API"]["password"],
+            }
         )
-
-        return result
+        print(job_id)
+        response = requests.get(url, params=params_resultfile, timeout=(5, 15))
+        """
+        # result = json.loads(get_data_from_endpoint(endpoint="data", method="data", params=params_resultfile))
+        # print('Final response:', response.json())
+        # result = load_data(endpoint="data", method="resultfile", params=params_resultfile, as_json=True)
+        print("test1")
+        print(job_id)
+        result = load_data(
+            endpoint="data", method="resultfile", params=params_resultfile
+        )
+        # return json.loads(result)
+        # return result
+        print("test2")
+        # return str(result.text)
 
     else:
         failed_response = _generic_status_dict(
@@ -237,10 +299,10 @@ def _check_invalid_status_code(status_code: int) -> None:
     Raises:
         AssertionError: Assert that status is not 4xx or 5xx
     """
-    assert status_code // 100 not in [
-        4,
-        5,
-    ], f"Error {status_code}: The server returned a {status_code} status code"
+    if status_code // 100 in [4, 5]:
+        raise requests.exceptions.HTTPError(
+            f"Error {status_code}: The server returned a {status_code} status code"
+        )
 
 
 def _check_invalid_destatis_status_code(response: requests.Response) -> None:
@@ -272,6 +334,7 @@ def _check_destatis_status(destatis_status: dict) -> None:
     If the status message is erroneous an error will be raised.
 
     Possible Codes (2.1.2 Grundstruktur der Responses):
+    # TODO: Ask Destatis for full list of error codes
     - 0: "erfolgreich" (Type: "Information")
     - 22: "erfolgreich mit Parameteranpassung" (Type: "Warnung")
     - 104: "Kein passendes Objekt zu Suche" (Type: "Information")
@@ -280,32 +343,35 @@ def _check_destatis_status(destatis_status: dict) -> None:
         destatis_status (dict): Status response dict from Destatis
 
     Raises:
-        # TODO: Is this a Value or KeyError?
-        ValueError: If the status code or type displays an error (caused by the user inputs)
+        DestatisStatusError: If the status code or type displays an error (caused by the user inputs)
     """
     # -1 status code for unexpected errors and if no status code is given (faulty response)
     destatis_status_code = destatis_status.get("Code", -1)
-    destatis_status_type = destatis_status.get("Type")
+    destatis_status_type = destatis_status.get("Type", "Information")
     destatis_status_content = destatis_status.get("Content")
 
+    # define status types
     error_en_de = ["Error", "Fehler"]
     warning_en_de = ["Warning", "Warnung"]
 
     # check for generic/ system error
     if destatis_status_code == -1:
-        raise ValueError(
-            "Error: There is a system error.\
-                Please check your query parameters."
+        raise DestatisStatusError(
+            "Error: There is a system error. Please check your query parameters."
         )
 
     # check for destatis/ query errors
     elif (destatis_status_code == 104) or (destatis_status_type in error_en_de):
-        raise ValueError(destatis_status_content)
+        raise DestatisStatusError(destatis_status_content)
 
-    # print warnings to user
+    # output warnings to user
     elif (destatis_status_code == 22) or (
         destatis_status_type in warning_en_de
     ):
-        warnings.warn(destatis_status_content, UserWarning, stacklevel=2)
+        logger.warning(destatis_status_content)
 
-    # TODO: pass response information to user, see feature branch 45
+    # output information to user
+    elif destatis_status_type.lower() == "information":
+        logger.info(
+            "Code %d : %s", destatis_status_code, destatis_status_content
+        )
