@@ -117,9 +117,9 @@ def _jobs_params(params: dict) -> Optional[dict]:
     negative = ["nein", "n", "no"]
 
     # define initial input for select
-    job_bool = [""]
+    job_bool = ""
 
-    while job_bool[0].lower() not in positive + negative:
+    while job_bool.lower() not in positive + negative:
         # get user input whether to start a job
         logger.warning(
             "Die Daten sind zu groß um direkt abgerufen zu werden."
@@ -130,7 +130,7 @@ def _jobs_params(params: dict) -> Optional[dict]:
         )
 
         # TODO: Not working for Windows!
-        job_bool, o, e = select.select([sys.stdin], [], [], 15)
+        job_bool = input()
 
         if not job_bool:
             logger.warning(
