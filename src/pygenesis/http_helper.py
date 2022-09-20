@@ -78,8 +78,11 @@ def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
 
     # if the response requires starting a job, the user is prompted to decide
     try:
+        # test for job-relevant status code
         response_status_code = response.json().get("Status").get("Code")
+
         if response_status_code == 98:
+            # ask for user input
             new_params = _jobs_params(params)
 
             # start job if decided by user input
@@ -87,19 +90,18 @@ def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
                 jobs_response = get_data_from_endpoint(
                     endpoint=endpoint, method=method, params=new_params
                 )
-                # jobs_response = load_data(endpoint=endpoint, method=method, params=new_params, as_json=True)
+
+                # return _jobs_process(jobs_response, new_params)
+
                 jobs_catalogue_params, job_id = _jobs_job_id(
                     jobs_response, params
                 )
-                response = json.loads(
-                    _jobs_catalogue_process(jobs_catalogue_params, job_id)
-                )
-                print(response)
+                return _jobs_catalogue_process(jobs_catalogue_params, job_id)
     except json.decoder.JSONDecodeError:
         pass
 
+    print(1)
     response.encoding = "UTF-8"
-    print(response.json())
     _check_invalid_status_code(response.status_code)
     _check_invalid_destatis_status_code(response)
 
@@ -153,7 +155,9 @@ def _jobs_params(params: dict) -> dict:
     positive = ["ja", "j", "y", "yes"]
     negative = ["nein", "n", "no"]
 
+    # define initial input for select
     job_bool = ""
+
     while job_bool.lower() not in positive + negative:
         # get user input whether to start a job
         logger.warning(
@@ -163,7 +167,9 @@ def _jobs_params(params: dict) -> dict:
             + "\n Sollen wir einen Job starten?"
             + "\n Ja/Nein:"
         )
+
         job_bool = input("Sollen wir einen Job starten? \n Ja/Nein")
+
         if job_bool.lower() not in (positive + negative):
             logger.warning(
                 "Keinen Input erhalten, es wird kein Job angestoßen."
@@ -172,14 +178,90 @@ def _jobs_params(params: dict) -> dict:
 
     # retry request with job parameter set to True
     if job_bool.lower() in positive:
-        params |= {"job": "true"}
+        params.update({"job": "true"})
 
     else:
         params = None
 
     # retry request with job parameter set to True
-    params.update({"job": "true"})
+    # params.update({"job": "true"})
     return params
+
+
+def _jobs_process(
+    response: str, params: dict, timeperiod: float = 90
+) -> requests.Response:
+    """
+    Helper method which handles overall job process.
+    Args:
+        response (str): Response text str
+        params (dict): dictionary of query parameters with {"job": "true"}
+        timeperiod (float): period until timeout
+    Returns:
+        requests.Response: the response from Destatis
+    """
+    # check status code of the response
+    job_true_response = json.loads(response)
+    assert (
+        job_true_response.get("Status").get("Code") == 99
+    ), "Unexpected status code when automatically starting a job!"
+
+    # check out job_id & inform user
+    s = job_true_response.get("Status").get("Content")
+    job_id = s.split(":")[1].strip()
+    logger.info("Der Job wurde angestoßen mit der ID: %s", job_id)
+
+    # check job status via catalogue
+    params.update({"sortcriterion": "time"})
+    catalogue_state = None
+
+    # set timeout of 90 seconds from now
+    timeout = time.time() + timeperiod
+    while (
+        catalogue_state not in ["Fertig", "finished"] and time.time() < timeout
+    ):
+        # fetch current process status
+        catalogue_response = get_data_from_endpoint(
+            "catalogue", "jobs?", params
+        )
+        # convert response.text str to json
+        catalogue_response = json.loads(catalogue_response)
+        # assess that response relates to the current/ last (element [-1]) request
+        if catalogue_response.get("List")[-1].get("Code") == job_id:
+            catalogue_state = catalogue_response.get("List")[-1].get("State")
+        else:
+            pass
+
+        # inform user
+        logger.info(
+            "Der Endpunkt catalogue/jobs wurde mit der ID %s angesprochen. Der Status ist: %s",
+            job_id,
+            catalogue_state,
+        )
+
+        # wait to allow processing on the server side & try again if not finished
+        time.sleep(20)
+
+    # download the data if job finished successfully
+    if catalogue_state in ["Fertig", "finished"]:
+        params_resultfile = {
+            "name": job_id,
+            "area": "all",
+            "language": "de",
+        }
+        result = load_data("data", "resultfile?", params_resultfile)
+        print(result)
+
+        return result
+
+    else:
+        failed_response = _generic_status_dict(
+            -1,
+            "The started job did not finish successfully!",
+            "Fehler",
+        )
+
+        return failed_response
 
 
 def _jobs_job_id(response: requests.Response, params: dict) -> dict:
@@ -193,19 +275,19 @@ def _jobs_job_id(response: requests.Response, params: dict) -> dict:
     Returns:
         dict: new dict to observe status of job in catalogue
     """
-    # receive status from response
+    # check status code of the response
     job_true_response = json.loads(response)
-    # job_true_response = response
     assert (
         job_true_response.get("Status").get("Code") == 99
     ), "Unexpected status code when automatically starting a job!"
 
+    # check out job_id & inform user
     s = job_true_response.get("Status").get("Content")
     job_id = s.split(":")[1].strip()
     logger.info("Der Job wurde angestoßen mit der ID: %s", job_id)
 
     # new params to check job status via catalogue
-    params.update({"selection": f"*{job_id}*"})
+    # params.update({"selection": f"*{job_id}*"})
     return params, job_id
 
 
@@ -214,6 +296,7 @@ def _jobs_catalogue_process(
 ) -> json:
     """
     Helper method which checks the status of job in catalogue endpoint and returns final data.
+    Data is automatically cached.
 
     Args:
         params (dict): dictionary of query parameters
@@ -226,58 +309,44 @@ def _jobs_catalogue_process(
     # while loop timeout after 'timeperiod'
     timeout = time.time() + timeperiod
     catalogue_state = None
+
     while time.time() < timeout:
-        time.sleep(20)
-        logger.info(
-            "Der Endpunkt catalogue/jobs wurde mit der ID %s angesprochen. Der Status ist: %d",
-            job_id,
-            catalogue_state,
-        )
+        time.sleep(5)
+        # check job status
         catalogue_response = json.loads(
             get_data_from_endpoint(
                 endpoint="catalogue", method="jobs", params=params
             )
         )
-        catalogue_state = catalogue_response.get("List")[-1].get("State")
+        if catalogue_response.get("List")[-1].get("Code") == job_id:
+            catalogue_state = catalogue_response.get("List")[-1].get("State")
+
+        logger.info(
+            "Der Endpunkt catalogue/jobs wurde mit der ID %s angesprochen. Der Status ist: %s",
+            job_id,
+            catalogue_state,
+        )
+
+        # exit early if job has finished
         if catalogue_state in ["Fertig", "finished"]:
             break
 
         # wait to allow processing on the server side & try again if not finished
-        time.sleep(20)
+        time.sleep(15)
 
     # download the data if job finished successfully
     if catalogue_state in ["Fertig", "finished"]:
         params_resultfile = {
             "name": job_id,
-            "searchcriterion": "code",
             "area": "all",
             "language": "de",
         }
-        # result = get_data_from_endpoint(endpoint="data", method="resultfile", params=params_resultfile)
-        """
-        config = load_config()
-        url = f"{config['GENESIS API']['base_url']}{'data'}/{'resultfile'}"
-        params_resultfile.update(
-            {
-                "username": config["GENESIS API"]["username"],
-                "password": config["GENESIS API"]["password"],
-            }
-        )
-        print(job_id)
-        response = requests.get(url, params=params_resultfile, timeout=(5, 15))
-        """
-        # result = json.loads(get_data_from_endpoint(endpoint="data", method="data", params=params_resultfile))
-        # print('Final response:', response.json())
-        # result = load_data(endpoint="data", method="resultfile", params=params_resultfile, as_json=True)
-        print("test1")
-        print(job_id)
         result = load_data(
             endpoint="data", method="resultfile", params=params_resultfile
         )
-        # return json.loads(result)
-        # return result
-        print("test2")
-        # return str(result.text)
+
+        print(2)
+        return result
 
     else:
         failed_response = _generic_status_dict(
