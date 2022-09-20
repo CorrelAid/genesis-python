@@ -21,7 +21,7 @@ def whoami() -> str:
 
     _check_invalid_status_code(response.status_code)
 
-    return str(response.text)
+    return response.text
 
 
 def logincheck() -> str:
@@ -46,4 +46,4 @@ def logincheck() -> str:
     # and misleading usage of "Status" key in API response
     _check_invalid_status_code(response.status_code)
 
-    return str(response.text)
+    return response.text

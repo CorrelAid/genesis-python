@@ -1,5 +1,7 @@
 """Module provides wrapper for Profile GENESIS REST-API functions."""
 
+import logging
+
 from pygenesis.config import (
     _write_config,
     get_config_path_from_settings,
@@ -7,8 +9,10 @@ from pygenesis.config import (
 )
 from pygenesis.http_helper import get_data_from_endpoint
 
+logger = logging.getLogger(__name__)
 
-def password(new_password: str) -> str:
+
+def change_password(new_password: str) -> str:
     """
     Changes Genesis REST-API password and updates local config.
 
@@ -41,6 +45,8 @@ def password(new_password: str) -> str:
     config["GENESIS API"]["password"] = new_password
     _write_config(config, get_config_path_from_settings())
 
+    logger.info("Password changed successfully!")
+
     return response_text
 
 
@@ -56,11 +62,11 @@ def remove_result(name: str, area: str = "all") -> str:
     Returns:
         str: text response from Destatis
     """
-    params = {"name": name, "area": area}
+    params = {"name": name, "area": area, "language": "de"}
 
     # remove 'Ergebnistabelle' with previously defined parameters
     response_text = get_data_from_endpoint(
-        endpoint="profile", method="removeresult?", params=params
+        endpoint="profile", method="removeresult", params=params
     )
 
     return response_text
