@@ -100,7 +100,6 @@ def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
     except json.decoder.JSONDecodeError:
         pass
 
-    print(1)
     response.encoding = "UTF-8"
     _check_invalid_status_code(response.status_code)
     _check_invalid_destatis_status_code(response)
@@ -250,7 +249,6 @@ def _jobs_process(
             "language": "de",
         }
         result = load_data("data", "resultfile?", params_resultfile)
-        print(result)
 
         return result
 
@@ -287,7 +285,7 @@ def _jobs_job_id(response: requests.Response, params: dict) -> dict:
     logger.info("Der Job wurde angestoßen mit der ID: %s", job_id)
 
     # new params to check job status via catalogue
-    # params.update({"selection": f"*{job_id}*"})
+    params.update({"sortcriterion": "time"})
     return params, job_id
 
 
@@ -345,7 +343,6 @@ def _jobs_catalogue_process(
             endpoint="data", method="resultfile", params=params_resultfile
         )
 
-        print(2)
         return result
 
     else:
