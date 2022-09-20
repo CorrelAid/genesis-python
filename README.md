@@ -1,9 +1,9 @@
 # ``pystatis``
 
-
 ```pystatis``` is a Python wrapper for the GENESIS web service interface (API). It simplifies accessing the data from the German statistical federal office.
 
 The main features are:
+
 - **Simplified access** to the API. No more need to write cumbersome API calls.
 - **Credential management** removes need to manually add credentials.
 - **Integrated workflow** enables an end-to-end process from finding the relevant data to download it.
@@ -13,7 +13,7 @@ The main features are:
 
 To learn more about GENESIS refer to the official documentation [here](https://www.destatis.de/EN/Service/OpenData/api-webservice.html).
 
-## Installation <a name="installation"></a>
+## Installation
 
 You can install the package via
 
@@ -29,8 +29,8 @@ import pystatis as pystat
 print("Version:", pystat.__version__)
 ```
 
-## How to use
-### Setup config
+## Get started
+
 To be able to use the web service/API of GENESIS-Online, you have to be a registered user. You can create your user [here](https://www-genesis.destatis.de/genesis/online?Menu=Anmeldung).
 
 Once you have a registered user, you can use your username and password as credentials for authentication against the GENESIS-Online API.
@@ -50,6 +50,7 @@ After executing this code you should have a new `config.ini` file under the `<us
 Each time ``pystatis`` is communicating with GENESIS-Online via the API, it is automatically using the stored credentials in this `config.ini`, so you don't have to specify them again. In case of updated credentials, you can either run `init_config()` again or update the values directly in the `config.ini` file.
 
 GENESIS-Online provides a `helloworld` endpoint that can be used to check your credentials:
+
 ```python
 from pystatis import logincheck
 
@@ -61,32 +62,42 @@ If you can see a response like this, your setup is complete and you can start do
 
 For more details, please study the provided sample notebook for [cache](./nb/cache.ipynb).
 
-### Primer: The GENESIS data model
+## How to use
+
+### The GENESIS data model
+
 The Genesis data structure consists of multiple elements as summarized in the image below.
 ![Structure](assets/structure.png)
 
 This package currently supports retrieving the following data types:
+
 - Cubes: Multi-dimensional data objects
 - Tables: Derivatives of cubes that are already packaged into logical units
 
 ### Find the right data
+
 ``pystatis`` offers the `Find` class to search for any piece of information with GENESIS. Behind the scene it's using the `find` endpoint.
 
 Example:
+
 ```python
 from pystatis import Find
 
-results = Find("Rohöl") # Initiates object that contains all variables, statistics, tables and cubes that contain the query
+results = Find("Rohöl") # Initiates object that contains all variables, statistics, tables and cubes
+results.run() # Runs the query
 results.tables.df # Results for tables
 results.tables.get_code([1,2,3]) # Gets the table codes, e.g. for downloading the table
 results.tables.get_metadata([1,2]) # Gets the metadata for the table
 ```
+
 A complete overview of all use cases is provided in the [sample notebook.](/nb/find.py)
 
 ### Download data
+
 Data can be downloaded in to forms: as tables and as cubes. Both interfaces have been aligned to be as close as possible to each other.
 
 Example for downloading a Table:
+
 ```python
 from pystatis import Table
 
@@ -96,6 +107,7 @@ t.data  # a pandas data frame
 ```
 
 Example for downloading a Cube:
+
 ```python
 from pystatis import Cube
 
@@ -106,12 +118,25 @@ c.data  # a pandas data frame
 
 For more details, please study the provided sample notebook for [tables](./nb/table.ipynb) and [cubes](./nb/cube.ipynb).
 
+### Clear Cache
+
+When a cube or table is queried, it will be put into cache automatically. The cache can be cleared using the following function:
+
+```python
+from pystatis import clear_cache
+
+clear_cache("21311-0001")  # only deletes the data for the object with the specified name
+clear_cache()  # deletes the complete cache
+```
 
 ## License
+
 Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 ## Roadmap
+
 A few ideas we should implement in the maybe-near future:
+
 - Improve Table parsing. Right now, the parsing is really simple and we should align the cube and table format so that the data frame for tables is more convenient to use.
 - Create a source code documentation with Sphinx or similar tools.
 - Mechanism to download data that is newer than the cached version. Right now, once data is cached, it is always retrieved from cache no matter if there is a newer version online. However, this could be quite challenging as the GENESIS API is really bad in providing a good and consistent field for the last update datetime.
@@ -119,6 +144,7 @@ A few ideas we should implement in the maybe-near future:
 - Understand and support time series.
 
 ## How to contribute?
+
 Contributions to this project are highly appreciated! You can either contact the maintainers or directly create a pull request for your proposed changes:
 
 1. Fork the Project
