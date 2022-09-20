@@ -3,7 +3,6 @@ import json
 import logging
 import time
 from pathlib import Path
-from threading import Timer
 from typing import Union
 
 import requests
@@ -135,7 +134,7 @@ def _generic_status_dict(
         },
     }
 
-    request_status._content = json.dumps(status_dict).encode("utf-8")
+    request_status._content = json.dumps(status_dict).encode("utf-8") # pylint: disable=W0212
 
     return request_status
 
