@@ -4,6 +4,7 @@ import logging
 import time
 from pathlib import Path
 from typing import Union
+from threading import Timer
 
 import requests
 
@@ -86,12 +87,11 @@ def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
             new_params = _jobs_params(params)
 
             # start job if decided by user input
-            if type(new_params) == dict:
-                jobs_response = get_data_from_endpoint(
-                    endpoint=endpoint, method=method, params=new_params
+            if new_params.get("job") == "true":
+                jobs_response = load_data(
+                    endpoint=endpoint, method=method, params=new_params, as_json=True
                 )
 
-                # return _jobs_process(jobs_response, new_params)
 
                 jobs_catalogue_params, job_id = _jobs_job_id(
                     jobs_response, params
@@ -140,7 +140,7 @@ def _generic_status_dict(
     return request_status
 
 
-def _jobs_params(params: dict) -> dict:
+def _jobs_params(params: dict, input_timeout: float = 10) -> dict:
     """
     Helper method which handles too large data requests with option of starting a job.
 
@@ -148,150 +148,64 @@ def _jobs_params(params: dict) -> dict:
         params (dict): dictionary of query parameters
 
     Returns:
-        dict: new dict to start a job
+        dict: new request params dict to start a job
     """
     # matching cases for user inputs
     positive = ["ja", "j", "y", "yes"]
-    negative = ["nein", "n", "no"]
 
-    # define initial input for select
-    job_bool = ""
-
-    while job_bool.lower() not in positive + negative:
-        # get user input whether to start a job
-        logger.warning(
-            "Die Daten sind zu groß um direkt abgerufen zu werden."
-            + "Es muss ein Job gestartet werden, der einige Sekunden braucht,"
-            + "um die Daten bereitzustellen und abzurufen."
-            + "\n Sollen wir einen Job starten?"
-            + "\n Ja/Nein:"
-        )
-
-        job_bool = input("Sollen wir einen Job starten? \n Ja/Nein")
-
-        if job_bool.lower() not in (positive + negative):
-            logger.warning(
-                "Keinen Input erhalten, es wird kein Job angestoßen."
-            )
-            job_bool = "nein"
+    t = Timer(input_timeout, logger.warning, ["Keinen Input erhalten, es wird kein Job angestoßen."])
+    t.start()
+    prompt = "Die Daten sind zu groß um direkt abgerufen zu werden. " \
+             "Es muss ein Job gestartet werden, der einige Sekunden braucht," \
+             "um die Daten bereitzustellen und abzurufen." \
+             "\n Sollen wir einen Job starten?" \
+             "\n Ja/Nein:"
+    job_bool = input(prompt)
+    t.cancel()
 
     # retry request with job parameter set to True
     if job_bool.lower() in positive:
         params.update({"job": "true"})
 
     else:
-        params = None
+        logger.warning(
+            "Keinen Input erhalten, es wird kein Job angestoßen."
+        )
+        params.update({"job": "false"})
 
     # retry request with job parameter set to True
-    # params.update({"job": "true"})
     return params
 
 
-def _jobs_process(
-    response: str, params: dict, timeperiod: float = 90
-) -> requests.Response:
-    """
-    Helper method which handles overall job process.
-    Args:
-        response (str): Response text str
-        params (dict): dictionary of query parameters with {"job": "true"}
-        timeperiod (float): period until timeout
-    Returns:
-        requests.Response: the response from Destatis
-    """
-    # check status code of the response
-    job_true_response = json.loads(response)
-    assert (
-        job_true_response.get("Status").get("Code") == 99
-    ), "Unexpected status code when automatically starting a job!"
-
-    # check out job_id & inform user
-    s = job_true_response.get("Status").get("Content")
-    job_id = s.split(":")[1].strip()
-    logger.info("Der Job wurde angestoßen mit der ID: %s", job_id)
-
-    # check job status via catalogue
-    params.update({"sortcriterion": "time"})
-    catalogue_state = None
-
-    # set timeout of 90 seconds from now
-    timeout = time.time() + timeperiod
-    while (
-        catalogue_state not in ["Fertig", "finished"] and time.time() < timeout
-    ):
-        # fetch current process status
-        catalogue_response = get_data_from_endpoint(
-            "catalogue", "jobs?", params
-        )
-        # convert response.text str to json
-        catalogue_response = json.loads(catalogue_response)
-        # assess that response relates to the current/ last (element [-1]) request
-        if catalogue_response.get("List")[-1].get("Code") == job_id:
-            catalogue_state = catalogue_response.get("List")[-1].get("State")
-        else:
-            pass
-
-        # inform user
-        logger.info(
-            "Der Endpunkt catalogue/jobs wurde mit der ID %s angesprochen. Der Status ist: %s",
-            job_id,
-            catalogue_state,
-        )
-
-        # wait to allow processing on the server side & try again if not finished
-        time.sleep(20)
-
-    # download the data if job finished successfully
-    if catalogue_state in ["Fertig", "finished"]:
-        params_resultfile = {
-            "name": job_id,
-            "area": "all",
-            "language": "de",
-        }
-        result = load_data("data", "resultfile?", params_resultfile)
-
-        return result
-
-    else:
-        failed_response = _generic_status_dict(
-            -1,
-            "The started job did not finish successfully!",
-            "Fehler",
-        )
-
-        return failed_response
-
-
-def _jobs_job_id(response: requests.Response, params: dict) -> dict:
+def _jobs_job_id(response, params: dict) -> dict:
     """
     Helper method which handles too large data requests and gives access to job id.
 
     Args:
+        response (json): Response from endpoint request with job set equal true
         params (dict): dictionary of query parameters
-        response (requests.Response): Response from endpoint request with job set equal true
 
     Returns:
         dict: new dict to observe status of job in catalogue
     """
     # check status code of the response
-    job_true_response = json.loads(response)
     assert (
-        job_true_response.get("Status").get("Code") == 99
+        response.get("Status").get("Code") == 99
     ), "Unexpected status code when automatically starting a job!"
 
     # check out job_id & inform user
-    s = job_true_response.get("Status").get("Content")
+    s = response.get("Status").get("Content")
     job_id = s.split(":")[1].strip()
     logger.info("Der Job wurde angestoßen mit der ID: %s", job_id)
 
     # new params to check job status via catalogue
-    params.update({"sortcriterion": "time"})
+    params.update({"selection": f"*{job_id}*", "sortcriterion": "Auftragstyp"})
     return params, job_id
 
 
 def _jobs_catalogue_process(
-    params: dict, job_id: str, timeperiod: float = 90
-) -> json:
+    params: dict, job_id: str, timeperiod: float = 90, waiting_time: float = 15
+):
     """
     Helper method which checks the status of job in catalogue endpoint and returns final data.
     Data is automatically cached.
@@ -302,7 +216,7 @@ def _jobs_catalogue_process(
         timeperiod (float): optional float for timeout
 
     Returns:
-        json: json of requested data
+        result (json): json of requested data
     """
     # while loop timeout after 'timeperiod'
     timeout = time.time() + timeperiod
@@ -311,11 +225,10 @@ def _jobs_catalogue_process(
     while time.time() < timeout:
         time.sleep(5)
         # check job status
-        catalogue_response = json.loads(
-            get_data_from_endpoint(
-                endpoint="catalogue", method="jobs", params=params
-            )
+        catalogue_response = load_data(
+            endpoint="catalogue", method="jobs", params=params, as_json=True
         )
+
         if catalogue_response.get("List")[-1].get("Code") == job_id:
             catalogue_state = catalogue_response.get("List")[-1].get("State")
 
@@ -330,7 +243,7 @@ def _jobs_catalogue_process(
             break
 
         # wait to allow processing on the server side & try again if not finished
-        time.sleep(15)
+        time.sleep(waiting_time)
 
     # download the data if job finished successfully
     if catalogue_state in ["Fertig", "finished"]:
@@ -439,5 +352,5 @@ def _check_destatis_status(destatis_status: dict) -> None:
     # output information to user
     elif destatis_status_type.lower() == "information":
         logger.info(
-            "Code %d : %s", destatis_status_code, destatis_status_content
+            "Code %d: %s", destatis_status_code, destatis_status_content
         )
