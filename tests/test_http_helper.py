@@ -11,7 +11,8 @@ from pygenesis.custom_exceptions import DestatisStatusError
 from pygenesis.http_helper import (
     _check_invalid_destatis_status_code,
     _check_invalid_status_code,
-    _jobs_params,
+    _jobs_catalogue_process,
+    _jobs_job_id,
     get_data_from_endpoint,
 )
 
@@ -174,48 +175,65 @@ def test__check_invalid_destatis_status_code_without_error(caplog):
         assert False
 
 
-def test__jobs_params_wrong_user_input(monkeypatch):
+def test__jobs_job_id_successful():
     """
-    Basic tests to check user input besides positive or negative.
+    Testing successfully returning the updated params dict and the correct job_id
     """
-    monkeypatch.setattr("builtins.input", lambda _: "Jein")
-    new_params = _jobs_params({}, 0.01)
-    assert new_params.status_code == 42
+    status_content = (
+        "Der Bearbeitungsauftrag wurde erstellt. "
+        "Die Tabelle kann in Kürze als Ergebnis mit folgendem Namen abgerufen werden: 42151-0001_976196443"
+    )
+    response = json.loads(
+        str(
+            _generic_request_status(
+                True, 99, "Information", status_content
+            ).text
+        )
+    )
+    params = {}
+    new_params, job_id = _jobs_job_id(response, params)
+    assert new_params.get("selection") == f"*42151-0001_976196443*"
+    assert job_id == f"42151-0001_976196443"
 
 
-def test__jobs_params_no_user_input(monkeypatch):
+def test__jobs_job_id_no_status_content():
     """
-    Basic tests to check no user input.
+    Testing no status_content
     """
-    new_params = _jobs_params({}, 0.01)
-    assert new_params.status_code == 42
+    status_content = None
+    response = json.loads(
+        str(
+            _generic_request_status(
+                True, 99, "Information", status_content
+            ).text
+        )
+    )
+    params = {}
+    try:
+        _jobs_job_id(response, params)
+    except AttributeError:
+        # failed successfully
+        pass
 
 
-def test__jobs_params_all_successful_user_input(monkeypatch):
+def test__jobs_job_id_wrong_status_code():
     """
-    Basic tests to check the successful user input.
-    Testing positive input for starting a job and negative input for not starting the job.
+    Testing no status_content
     """
-    inputs = ["ja", "j", "y", "yes", "nein", "n", "no"]
-    for i in inputs:
-        monkeypatch.setattr("builtins.input", lambda _: i)
-        new_params = _jobs_params({}, 0.01)
-        assert type(new_params) in [dict, requests.models.Response]
-        if type(new_params) == dict:
-            assert new_params.get("job") == "true"
-        if type(new_params) == requests.models.Response:
-            assert new_params.status_code == 42
-
-
-def test__jobs_job_id_get_id():
-    status_content = "Der Bearbeitungsauftrag wurde erstellt. Die Tabelle kann in Kürze als Ergebnis mit folgendem Namen abgerufen werden: 42151-0001_976196443"
-    response = _generic_request_status(True, 99, "Information", status_content)
-    print(response)
-
-
-def test__jobs_job_id_no_id():
-    pass
-
-
-def test__jobs_job_id_code_error():
-    pass
+    status_content = (
+        "Der Bearbeitungsauftrag wurde erstellt. "
+        "Die Tabelle kann in Kürze als Ergebnis mit folgendem Namen abgerufen werden: 42151-0001_976196443"
+    )
+    response = json.loads(
+        str(
+            _generic_request_status(
+                True, 98, "Information", status_content
+            ).text
+        )
+    )
+    params = {}
+    try:
+        _jobs_job_id(response, params)
+    except AssertionError:
+        # failed successfully
+        pass

@@ -3,8 +3,8 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Union
 from threading import Timer
+from typing import Union
 
 import requests
 
@@ -77,26 +77,26 @@ def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
 
     response = requests.get(url, params=params_, timeout=(5, 15))
 
-    # if the response requires starting a job, the user is prompted to decide
+    # if the response requires starting a job, new params are generated and the job is started
     try:
         # test for job-relevant status code
         response_status_code = response.json().get("Status").get("Code")
 
         if response_status_code == 98:
-            # ask for user input
-            new_params = _jobs_params(params)
+            # updating params to start a job
+            new_params = params.copy
+            new_params.update({"job": "true"})
 
-            # start job if decided by user input
-            if new_params.get("job") == "true":
-                jobs_response = load_data(
-                    endpoint=endpoint, method=method, params=new_params, as_json=True
-                )
+            # starting a job
+            jobs_response = load_data(
+                endpoint=endpoint,
+                method=method,
+                params=new_params,
+                as_json=True,
+            )
 
-
-                jobs_catalogue_params, job_id = _jobs_job_id(
-                    jobs_response, params
-                )
-                return _jobs_catalogue_process(jobs_catalogue_params, job_id)
+            jobs_catalogue_params, job_id = _jobs_job_id(jobs_response, params)
+            return _jobs_catalogue_process(jobs_catalogue_params, job_id)
     except json.decoder.JSONDecodeError:
         pass
 
@@ -138,43 +138,6 @@ def _generic_status_dict(
     request_status._content = json.dumps(status_dict).encode("utf-8")
 
     return request_status
-
-
-def _jobs_params(params: dict, input_timeout: float = 10) -> dict:
-    """
-    Helper method which handles too large data requests with option of starting a job.
-
-    Args:
-        params (dict): dictionary of query parameters
-
-    Returns:
-        dict: new request params dict to start a job
-    """
-    # matching cases for user inputs
-    positive = ["ja", "j", "y", "yes"]
-
-    t = Timer(input_timeout, logger.warning, ["Keinen Input erhalten, es wird kein Job angestoßen."])
-    t.start()
-    prompt = "Die Daten sind zu groß um direkt abgerufen zu werden. " \
-             "Es muss ein Job gestartet werden, der einige Sekunden braucht," \
-             "um die Daten bereitzustellen und abzurufen." \
-             "\n Sollen wir einen Job starten?" \
-             "\n Ja/Nein:"
-    job_bool = input(prompt)
-    t.cancel()
-
-    # retry request with job parameter set to True
-    if job_bool.lower() in positive:
-        params.update({"job": "true"})
-
-    else:
-        logger.warning(
-            "Keinen Input erhalten, es wird kein Job angestoßen."
-        )
-        params.update({"job": "false"})
-
-    # retry request with job parameter set to True
-    return params
 
 
 def _jobs_job_id(response, params: dict) -> dict:
