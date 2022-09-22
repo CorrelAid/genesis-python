@@ -1,5 +1,4 @@
 import re
-from functools import cache
 from pathlib import Path
 
 import pytest
@@ -9,6 +8,7 @@ from pygenesis.cache import (
     cache_data,
     clear_cache,
     hit_in_cash,
+    normalize_name,
     read_from_cache,
 )
 from pygenesis.config import (
@@ -18,8 +18,6 @@ from pygenesis.config import (
     load_config,
     load_settings,
 )
-
-SLEEP_TIME = 0.1
 
 
 @pytest.fixture()
@@ -84,6 +82,11 @@ def test_hit_cache(cache_dir, params):
     assert not hit_in_cash(cache_dir, "test-hit-cache", params)
     cache_data(cache_dir, "test-hit-cache", params, "test")
     assert hit_in_cash(cache_dir, "test-hit-cache", params)
+
+
+def test_normalize_name():
+    full_name = "42153-0001_878150652"
+    assert normalize_name(full_name) == "42153-0001"
 
 
 def test_change_in_params(cache_dir, params):

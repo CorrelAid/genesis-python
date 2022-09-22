@@ -2,6 +2,7 @@
 import hashlib
 import json
 import logging
+import re
 import shutil
 import zipfile
 from datetime import date
@@ -11,6 +12,7 @@ from typing import Optional
 from pygenesis.config import load_config
 
 logger = logging.getLogger(__name__)
+JOB_ID_PATTERN = r"\d+"
 
 
 def cache_data(
@@ -105,6 +107,21 @@ def _build_file_path(cache_dir: Path, name: str, params: dict) -> Path:
     data_dir = cache_dir / name / params_hash.hexdigest()
 
     return data_dir
+
+
+def normalize_name(name: str) -> str:
+    """Normalize a Destatis object name by omitting the optional job id.
+
+    Args:
+        name (str): The unique identifier in GENESIS-Online.
+
+    Returns:
+        str: The unique identifier without the optional job id.
+    """
+    if len(re.findall(JOB_ID_PATTERN, name)) == 3:
+        name = name.split("_")[0]
+
+    return name
 
 
 def hit_in_cash(
