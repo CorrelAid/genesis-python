@@ -16,8 +16,6 @@ logger = logging.getLogger(__name__)
 def cache_data(
     cache_dir: Path,
     name: Optional[str],
-    endpoint: str,
-    method: str,
     params: dict,
     data: str,
 ) -> None:
@@ -39,7 +37,7 @@ def cache_data(
     if name is None:
         return
 
-    data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
+    data_dir = _build_file_path(cache_dir, name, params)
     file_name = f"{str(date.today()).replace('-', '')}.txt"
 
     # create parent dirs, if necessary
@@ -66,8 +64,6 @@ def cache_data(
 def read_from_cache(
     cache_dir: Path,
     name: Optional[str],
-    endpoint: str,
-    method: str,
     params: dict,
 ) -> str:
     """Read and return compressed data from cache.
@@ -85,7 +81,7 @@ def read_from_cache(
     if name is None:
         return ""
 
-    data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
+    data_dir = _build_file_path(cache_dir, name, params)
 
     versions = sorted(
         data_dir.glob("*"),
@@ -100,12 +96,13 @@ def read_from_cache(
     return data
 
 
-def _build_file_path(
-    cache_dir: Path, name: str, endpoint: str, method: str, params: dict
-) -> Path:
+def _build_file_path(cache_dir: Path, name: str, params: dict) -> Path:
+    params_ = params.copy()
+    if "job" in params_:
+        del params_["job"]
     params_hash = hashlib.blake2s(digest_size=10, usedforsecurity=False)
-    params_hash.update(json.dumps(params).encode("UTF-8"))
-    data_dir = cache_dir / name / endpoint / method / params_hash.hexdigest()
+    params_hash.update(json.dumps(params_).encode("UTF-8"))
+    data_dir = cache_dir / name / params_hash.hexdigest()
 
     return data_dir
 
@@ -113,8 +110,6 @@ def _build_file_path(
 def hit_in_cash(
     cache_dir: Path,
     name: Optional[str],
-    endpoint: str,
-    method: str,
     params: dict,
 ) -> bool:
     """Check if data is already cached.
@@ -132,7 +127,7 @@ def hit_in_cash(
     if name is None:
         return False
 
-    data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
+    data_dir = _build_file_path(cache_dir, name, params)
     return data_dir.exists()
 
 
