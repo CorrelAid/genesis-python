@@ -38,7 +38,8 @@ def load_data(
     cache_dir = Path(config["DATA"]["cache_dir"])
     name = params.get("name")
 
-    name = normalize_name(name)
+    if name is not None:
+        name = normalize_name(name)
 
     if endpoint == "data":
         if hit_in_cash(cache_dir, name, params):
