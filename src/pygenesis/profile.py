@@ -1,6 +1,7 @@
 """Module provides wrapper for Profile GENESIS REST-API functions."""
 
 import logging
+from typing import cast
 
 from pygenesis.config import (
     _write_config,
@@ -47,7 +48,7 @@ def change_password(new_password: str) -> str:
 
     logger.info("Password changed successfully!")
 
-    return response_text
+    return cast(str, response_text)
 
 
 def remove_result(name: str, area: str = "all") -> str:
@@ -69,4 +70,4 @@ def remove_result(name: str, area: str = "all") -> str:
         endpoint="profile", method="removeresult", params=params
     )
 
-    return response_text
+    return cast(str, response_text)
