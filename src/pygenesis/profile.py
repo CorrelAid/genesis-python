@@ -7,7 +7,7 @@ from pygenesis.config import (
     get_config_path_from_settings,
     load_config,
 )
-from pygenesis.http_helper import get_data_from_endpoint
+from pygenesis.http_helper import load_data
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,8 @@ def change_password(new_password: str) -> str:
         ) from e
 
     # change remote password
-    response_text = get_data_from_endpoint(
-        endpoint="profile", method="password", params=params
+    response_text = load_data(
+        endpoint="profile", method="password", params=params, as_json=True
     )
     # change local password
     config["GENESIS API"]["password"] = new_password
@@ -65,8 +65,8 @@ def remove_result(name: str, area: str = "all") -> str:
     params = {"name": name, "area": area, "language": "de"}
 
     # remove 'Ergebnistabelle' with previously defined parameters
-    response_text = get_data_from_endpoint(
-        endpoint="profile", method="removeresult", params=params
+    response_text = load_data(
+        endpoint="profile", method="removeresult", params=params, as_json=True
     )
 
     return response_text
