@@ -19,7 +19,7 @@ def cache_dir(tmp_path_factory):
 
 
 @patch("pygenesis.profile.get_config_path_from_settings")
-@patch("pygenesis.profile.get_data_from_endpoint")
+@patch("pygenesis.profile.load_data")
 @patch("pygenesis.profile.load_config")
 def test_change_password(
     mock_config, mock_requests, mock_config_dir, cache_dir
@@ -32,21 +32,21 @@ def test_change_password(
         "password": "password",
     }
     mock_config.return_value = config
-    mock_requests.return_value = _generic_request_status()
+    mock_requests.return_value = str(_generic_request_status().text)
     mock_config_dir.return_value = cache_dir / "config.ini"
 
     change_password("new_password")
 
 
 @patch("pygenesis.profile.get_config_path_from_settings")
-@patch("pygenesis.profile.get_data_from_endpoint")
+@patch("pygenesis.profile.load_data")
 @patch("pygenesis.profile.load_config")
 def test_change_password_keyerror(
     mock_config, mock_requests, mock_config_dir, cache_dir
 ):
     # define empty config (no password)
     mock_config.return_value = {"GENESIS API": {}}
-    mock_requests.return_value = _generic_request_status()
+    mock_requests.return_value = str(_generic_request_status().text)
     mock_config_dir.return_value = cache_dir
 
     with pytest.raises(KeyError) as e:
@@ -58,8 +58,8 @@ def test_change_password_keyerror(
     )
 
 
-@patch("pygenesis.profile.get_data_from_endpoint")
+@patch("pygenesis.profile.load_data")
 def test_remove_result(mock_requests):
-    mock_requests.return_value = _generic_request_status()
+    mock_requests.return_value = str(_generic_request_status().text)
 
     remove_result("11111-0001")

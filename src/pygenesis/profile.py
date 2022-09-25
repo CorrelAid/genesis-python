@@ -39,7 +39,7 @@ def change_password(new_password: str) -> str:
 
     # change remote password
     response_text = load_data(
-        endpoint="profile", method="password", params=params, as_json=True
+        endpoint="profile", method="password", params=params
     )
     # change local password
     config["GENESIS API"]["password"] = new_password
@@ -66,7 +66,7 @@ def remove_result(name: str, area: str = "all") -> str:
 
     # remove 'Ergebnistabelle' with previously defined parameters
     response_text = load_data(
-        endpoint="profile", method="removeresult", params=params, as_json=True
+        endpoint="profile", method="removeresult", params=params
     )
 
     return response_text
