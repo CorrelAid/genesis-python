@@ -1,11 +1,8 @@
 import json
 import logging
-import re
-from pathlib import Path
 
 import pytest
 import requests
-from mock import patch
 
 from pygenesis.custom_exceptions import DestatisStatusError
 from pygenesis.http_helper import (
@@ -59,21 +56,24 @@ def _generic_request_status(
     return request_status
 
 
-@patch("requests.get")
-@patch("pygenesis.http_helper.load_config")
-def test_get_response_from_endpoint(mock_config, mock_requests):
+def test_get_response_from_endpoint(mocker):
     """
     Test once with generic API response, more detailed tests
     of subfunctions and specific cases below.
     """
-    mock_config.return_value = {
-        "GENESIS API": {
-            "base_url": "mocked_url",
-            "username": "JaneDoe",
-            "password": "password",
-        }
-    }
-    mock_requests.return_value = _generic_request_status()
+    mocker.patch(
+        "pygenesis.http_helper.requests", return_value=_generic_request_status()
+    )
+    mocker.patch(
+        "pygenesis.http_helper.load_config",
+        return_value={
+            "GENESIS API": {
+                "base_url": "mocked_url",
+                "username": "JaneDoe",
+                "password": "password",
+            }
+        },
+    )
 
     get_data_from_endpoint(endpoint="endpoint", method="method", params={})
 
