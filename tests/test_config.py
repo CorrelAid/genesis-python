@@ -4,8 +4,8 @@ from configparser import ConfigParser
 from pathlib import Path
 
 import pytest
-from mock import patch
 
+import pygenesis.config
 from pygenesis.config import (
     DEFAULT_SETTINGS_FILE,
     _write_config,
@@ -33,16 +33,18 @@ def restore_settings():
     _write_config(old_settings, DEFAULT_SETTINGS_FILE)
 
 
-def test_settings():
+def test_create_settings_is_run_on_import():
     assert DEFAULT_SETTINGS_FILE.exists() and DEFAULT_SETTINGS_FILE.is_file()
 
 
-@patch("pygenesis.config.DEFAULT_CONFIG_DIR")
-@patch("pygenesis.config.DEFAULT_SETTINGS_FILE")
-def test_create_settings(mock_config, mock_settings, config_dir):
-    mock_config.return_value = config_dir
-    mock_settings.return_value = config_dir / "settings.ini"
+def test_create_settings(config_dir, mocker):
+    mocker.patch.object(pygenesis.config, "DEFAULT_CONFIG_DIR", config_dir)
+    mocker.patch.object(
+        pygenesis.config, "DEFAULT_SETTINGS_FILE", config_dir / "settings.ini"
+    )
     create_settings()
+
+    assert (config_dir / "settings.ini").is_file()
 
 
 def test_load_settings():
