@@ -39,3 +39,4 @@ log_cli = false
 
 [tool.isort]
 profile = "black"
+line_length = 80
