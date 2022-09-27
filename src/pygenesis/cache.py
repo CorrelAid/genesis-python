@@ -99,7 +99,23 @@ def read_from_cache(
 
 
 def _build_file_path(cache_dir: Path, name: str, params: dict) -> Path:
+    """Builds a unique cache directory name from name and hashed params dictionary.
+
+    The way this method works is that it creates a path under cache dir that is unique
+        because the name is a unique EVAS identifier number in Destatis and the hash
+        is (close enough) unique to a given dictionary with query parameter values.
+
+    Args:
+        cache_dir (Path): The root cache directory as configured in the config.ini.
+        name (str): The unique identifier for an object in Destatis.
+        params (dict): The query parameters for a given call to the Destatis API.
+
+    Returns:
+        Path: The path object to the directory where the data will be downloaded/cached.
+    """
     params_ = params.copy()
+    # we have to delete the job key here because otherwise we will not have a cache hit
+    # we use 10 digits because this is enough security to avoid hash collisions
     if "job" in params_:
         del params_["job"]
     params_hash = hashlib.blake2s(digest_size=10, usedforsecurity=False)
