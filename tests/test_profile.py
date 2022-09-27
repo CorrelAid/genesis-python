@@ -3,7 +3,6 @@ from configparser import ConfigParser
 from pathlib import Path
 
 import pytest
-from mock import patch
 
 from pygenesis.profile import change_password, remove_result
 from tests.test_http_helper import _generic_request_status
@@ -18,12 +17,7 @@ def cache_dir(tmp_path_factory):
     return Path(temp_dir)
 
 
-@patch("pygenesis.profile.get_config_path_from_settings")
-@patch("pygenesis.profile.load_data")
-@patch("pygenesis.profile.load_config")
-def test_change_password(
-    mock_config, mock_requests, mock_config_dir, cache_dir
-):
+def test_change_password(mocker, cache_dir):
     # mock configparser to be able to test writing of new password
     config = ConfigParser()
     config["GENESIS API"] = {
@@ -31,23 +25,34 @@ def test_change_password(
         "username": "JaneDoe",
         "password": "password",
     }
-    mock_config.return_value = config
-    mock_requests.return_value = str(_generic_request_status().text)
-    mock_config_dir.return_value = cache_dir / "config.ini"
+    mocker.patch("pygenesis.profile.load_config", return_value=config)
+    mocker.patch(
+        "pygenesis.profile.load_data",
+        return_value=str(_generic_request_status().text),
+    )
+    mocker.patch(
+        "pygenesis.profile.get_config_path_from_settings",
+        return_value=cache_dir / "config.ini",
+    )
 
-    change_password("new_password")
+    response = change_password("new_password")
+
+    assert response == str(_generic_request_status().text)
 
 
-@patch("pygenesis.profile.get_config_path_from_settings")
-@patch("pygenesis.profile.load_data")
-@patch("pygenesis.profile.load_config")
-def test_change_password_keyerror(
-    mock_config, mock_requests, mock_config_dir, cache_dir
-):
+def test_change_password_keyerror(mocker, cache_dir):
     # define empty config (no password)
-    mock_config.return_value = {"GENESIS API": {}}
-    mock_requests.return_value = str(_generic_request_status().text)
-    mock_config_dir.return_value = cache_dir
+    mocker.patch(
+        "pygenesis.profile.load_config", return_value={"GENESIS API": {}}
+    )
+    mocker.patch(
+        "pygenesis.profile.load_data",
+        return_value=str(_generic_request_status().text),
+    )
+    mocker.patch(
+        "pygenesis.profile.get_config_path_from_settings",
+        return_value=cache_dir / "config.ini",
+    )
 
     with pytest.raises(KeyError) as e:
         change_password("new_password")
@@ -58,8 +63,12 @@ def test_change_password_keyerror(
     )
 
 
-@patch("pygenesis.profile.load_data")
-def test_remove_result(mock_requests):
-    mock_requests.return_value = str(_generic_request_status().text)
+def test_remove_result(mocker):
+    mocker.patch(
+        "pygenesis.profile.load_data",
+        return_value=str(_generic_request_status().text),
+    )
 
-    remove_result("11111-0001")
+    response = remove_result("11111-0001")
+
+    assert response == str(_generic_request_status().text)
