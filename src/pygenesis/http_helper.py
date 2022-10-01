@@ -7,7 +7,12 @@ from typing import Union
 
 import requests
 
-from pygenesis.cache import cache_data, hit_in_cash, read_from_cache
+from pygenesis.cache import (
+    cache_data,
+    hit_in_cash,
+    normalize_name,
+    read_from_cache,
+)
 from pygenesis.config import load_config
 from pygenesis.custom_exceptions import DestatisStatusError
 
@@ -34,13 +39,17 @@ def load_data(
     cache_dir = Path(config["DATA"]["cache_dir"])
     name = params.get("name")
 
-    if hit_in_cash(cache_dir, name, endpoint, method, params):
-        data = read_from_cache(cache_dir, name, endpoint, method, params)
+    if name is not None:
+        name = normalize_name(name)
+
+    if endpoint == "data":
+        if hit_in_cash(cache_dir, name, params):
+            data = read_from_cache(cache_dir, name, params)
+        else:
+            data = get_data_from_endpoint(endpoint, method, params)
+            cache_data(cache_dir, name, params, data)
     else:
         data = get_data_from_endpoint(endpoint, method, params)
-
-        if endpoint == "data":
-            cache_data(cache_dir, name, endpoint, method, params, data)
 
     if as_json:
         parsed_data: dict = json.loads(data)

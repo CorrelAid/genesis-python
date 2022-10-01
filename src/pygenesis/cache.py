@@ -2,6 +2,7 @@
 import hashlib
 import json
 import logging
+import re
 import shutil
 import zipfile
 from datetime import date
@@ -11,13 +12,12 @@ from typing import Optional
 from pygenesis.config import load_config
 
 logger = logging.getLogger(__name__)
+JOB_ID_PATTERN = r"\d+"
 
 
 def cache_data(
     cache_dir: Path,
     name: Optional[str],
-    endpoint: str,
-    method: str,
     params: dict,
     data: str,
 ) -> None:
@@ -39,7 +39,7 @@ def cache_data(
     if name is None:
         return
 
-    data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
+    data_dir = _build_file_path(cache_dir, name, params)
     file_name = f"{str(date.today()).replace('-', '')}.txt"
 
     # create parent dirs, if necessary
@@ -66,8 +66,6 @@ def cache_data(
 def read_from_cache(
     cache_dir: Path,
     name: Optional[str],
-    endpoint: str,
-    method: str,
     params: dict,
 ) -> str:
     """Read and return compressed data from cache.
@@ -85,7 +83,7 @@ def read_from_cache(
     if name is None:
         return ""
 
-    data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
+    data_dir = _build_file_path(cache_dir, name, params)
 
     versions = sorted(
         data_dir.glob("*"),
@@ -100,21 +98,51 @@ def read_from_cache(
     return data
 
 
-def _build_file_path(
-    cache_dir: Path, name: str, endpoint: str, method: str, params: dict
-) -> Path:
+def _build_file_path(cache_dir: Path, name: str, params: dict) -> Path:
+    """Builds a unique cache directory name from name and hashed params dictionary.
+
+    The way this method works is that it creates a path under cache dir that is unique
+        because the name is a unique EVAS identifier number in Destatis and the hash
+        is (close enough) unique to a given dictionary with query parameter values.
+
+    Args:
+        cache_dir (Path): The root cache directory as configured in the config.ini.
+        name (str): The unique identifier for an object in Destatis.
+        params (dict): The query parameters for a given call to the Destatis API.
+
+    Returns:
+        Path: The path object to the directory where the data will be downloaded/cached.
+    """
+    params_ = params.copy()
+    # we have to delete the job key here because otherwise we will not have a cache hit
+    # we use 10 digits because this is enough security to avoid hash collisions
+    if "job" in params_:
+        del params_["job"]
     params_hash = hashlib.blake2s(digest_size=10, usedforsecurity=False)
-    params_hash.update(json.dumps(params).encode("UTF-8"))
-    data_dir = cache_dir / name / endpoint / method / params_hash.hexdigest()
+    params_hash.update(json.dumps(params_).encode("UTF-8"))
+    data_dir = cache_dir / name / params_hash.hexdigest()
 
     return data_dir
+
+
+def normalize_name(name: str) -> str:
+    """Normalize a Destatis object name by omitting the optional job id.
+
+    Args:
+        name (str): The unique identifier in GENESIS-Online.
+
+    Returns:
+        str: The unique identifier without the optional job id.
+    """
+    if len(re.findall(JOB_ID_PATTERN, name)) == 3:
+        name = name.split("_")[0]
+
+    return name
 
 
 def hit_in_cash(
     cache_dir: Path,
     name: Optional[str],
-    endpoint: str,
-    method: str,
     params: dict,
 ) -> bool:
     """Check if data is already cached.
@@ -132,7 +160,7 @@ def hit_in_cash(
     if name is None:
         return False
 
-    data_dir = _build_file_path(cache_dir, name, endpoint, method, params)
+    data_dir = _build_file_path(cache_dir, name, params)
     return data_dir.exists()
 
 
