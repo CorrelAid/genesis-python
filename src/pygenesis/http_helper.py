@@ -126,11 +126,6 @@ def _jobs_job_id(response) -> requests.Response:
     Returns:
         response: either failing response or response after starting a job
     """
-    # check status code of the response
-    assert (
-        response.get("Status").get("Code") == 99
-    ), "Unexpected status code when automatically starting a job!"
-
     # check out job_id & inform user
     s = response.get("Status").get("Content")
     job_id = s.split(":")[1].strip()
