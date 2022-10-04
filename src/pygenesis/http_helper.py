@@ -1,7 +1,6 @@
 """Wrapper module for the data endpoint."""
 import json
 import logging
-import time
 from pathlib import Path
 from typing import Union
 
@@ -182,12 +181,14 @@ def _jobs_job_id(response) -> requests.Response:
     # Notifying user about successfully starting a job and returning the response of said request
     else:
         logger.info(
-            f"Der Status des Jobs kann über den catalogue/jobs Endpunkt "
-            f"mit dem Kriterium 'selection': f'*{job_id}' abgerufen werden"
+            "Der Status des Jobs kann über den catalogue/jobs Endpunkt "
+            "mit dem Kriterium 'selection': '*%s' abgerufen werden",
+            job_id,
         )
         logger.info(
-            f"Wenn der Status des Jobs 'Fertig' ist, können die Daten über den data/resultfile Endpunkt "
-            f"mit dem Kriterium 'name': '{job_id}' abgerufen werden"
+            "Wenn der Status des Jobs 'Fertig' ist, können die Daten über den data/resultfile Endpunkt "
+            "mit dem Kriterium 'name': '%s' abgerufen werden",
+            job_id,
         )
 
         return response
