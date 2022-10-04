@@ -91,8 +91,11 @@ def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
         response_status_code = response.json().get("Status").get("Code")
 
         if response_status_code == 98:
+            logger.info(
+                "Die Daten sind zu groß um direkt geladen zu werden, es wird ein Job angestoßen."
+            )
             # updating params to start a job
-            new_params = params.copy
+            new_params = params.copy()
             new_params.update({"job": "true"})
 
             # starting a job
@@ -103,8 +106,7 @@ def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
                 as_json=True,
             )
 
-            jobs_catalogue_params, job_id = _jobs_job_id(jobs_response, params)
-            return _jobs_catalogue_process(jobs_catalogue_params, job_id)
+            return _jobs_job_id(jobs_response)
     except json.decoder.JSONDecodeError:
         pass
 
@@ -143,21 +145,22 @@ def _generic_status_dict(
         },
     }
 
-    request_status._content = json.dumps(status_dict).encode("utf-8") # pylint: disable=W0212
+    request_status._content = json.dumps(status_dict).encode(
+        "utf-8"
+    )  # pylint: disable=W0212
 
     return request_status
 
 
-def _jobs_job_id(response, params: dict) -> dict:
+def _jobs_job_id(response) -> requests.Response:
     """
     Helper method which handles too large data requests and gives access to job id.
 
     Args:
         response (json): Response from endpoint request with job set equal true
-        params (dict): dictionary of query parameters
 
     Returns:
-        dict: new dict to observe status of job in catalogue
+        response: either failing response or response after starting a job
     """
     # check status code of the response
     assert (
@@ -167,76 +170,27 @@ def _jobs_job_id(response, params: dict) -> dict:
     # check out job_id & inform user
     s = response.get("Status").get("Content")
     job_id = s.split(":")[1].strip()
-    logger.info("Der Job wurde angestoßen mit der ID: %s", job_id)
-
-    # new params to check job status via catalogue
-    params.update({"selection": f"*{job_id}*", "sortcriterion": "Auftragstyp"})
-    return params, job_id
-
-
-def _jobs_catalogue_process(
-    params: dict, job_id: str, timeperiod: float = 90, waiting_time: float = 15
-):
-    """
-    Helper method which checks the status of job in catalogue endpoint and returns final data.
-    Data is automatically cached.
-
-    Args:
-        params (dict): dictionary of query parameters
-        job_id (str): string of job_id for catalogue endpoint
-        timeperiod (float): optional float for timeout
-
-    Returns:
-        result (json): json of requested data
-    """
-    # while loop timeout after 'timeperiod'
-    timeout = time.time() + timeperiod
-    catalogue_state = None
-
-    while time.time() < timeout:
-        time.sleep(5)
-        # check job status
-        catalogue_response = load_data(
-            endpoint="catalogue", method="jobs", params=params, as_json=True
-        )
-
-        if catalogue_response.get("List")[-1].get("Code") == job_id:
-            catalogue_state = catalogue_response.get("List")[-1].get("State")
-
-        logger.info(
-            "Der Endpunkt catalogue/jobs wurde mit der ID %s angesprochen. Der Status ist: %s",
-            job_id,
-            catalogue_state,
-        )
-
-        # exit early if job has finished
-        if catalogue_state in ["Fertig", "finished"]:
-            break
-
-        # wait to allow processing on the server side & try again if not finished
-        time.sleep(waiting_time)
-
-    # download the data if job finished successfully
-    if catalogue_state in ["Fertig", "finished"]:
-        params_resultfile = {
-            "name": job_id,
-            "area": "all",
-            "language": "de",
-        }
-        result = load_data(
-            endpoint="data", method="resultfile", params=params_resultfile
-        )
-
-        return result
-
-    else:
+    if job_id is None:
         failed_response = _generic_status_dict(
             -1,
-            "The started job did not finish successfully!",
+            "Der Job konnte nicht erfolgreich angestoßen werden!",
             "Fehler",
         )
 
         return failed_response
+
+    # Notifying user about successfully starting a job and returning the response of said request
+    else:
+        logger.info(
+            f"Der Status des Jobs kann über den catalogue/jobs Endpunkt "
+            f"mit dem Kriterium 'selection': f'*{job_id}' abgerufen werden"
+        )
+        logger.info(
+            f"Wenn der Status des Jobs 'Fertig' ist, können die Daten über den data/resultfile Endpunkt "
+            f"mit dem Kriterium 'name': '{job_id}' abgerufen werden"
+        )
+
+        return response
 
 
 def _check_invalid_status_code(status_code: int) -> None:

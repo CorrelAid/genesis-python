@@ -8,7 +8,6 @@ from pygenesis.custom_exceptions import DestatisStatusError
 from pygenesis.http_helper import (
     _check_invalid_destatis_status_code,
     _check_invalid_status_code,
-    _jobs_catalogue_process,
     _jobs_job_id,
     get_data_from_endpoint,
 )
@@ -190,9 +189,8 @@ def test__jobs_job_id_successful():
             ).text
         )
     )
-    params = {}
-    new_params, job_id = _jobs_job_id(response, params)
-    assert new_params.get("selection") == f"*42151-0001_976196443*"
+    response = _jobs_job_id(response)
+    job_id = response.get("Status").get("Content").split(":")[1].strip()
     assert job_id == f"42151-0001_976196443"
 
 
@@ -208,9 +206,8 @@ def test__jobs_job_id_no_status_content():
             ).text
         )
     )
-    params = {}
     try:
-        _jobs_job_id(response, params)
+        _jobs_job_id(response)
     except AttributeError:
         # failed successfully
         pass
@@ -231,9 +228,8 @@ def test__jobs_job_id_wrong_status_code():
             ).text
         )
     )
-    params = {}
     try:
-        _jobs_job_id(response, params)
+        _jobs_job_id(response)
     except AssertionError:
         # failed successfully
         pass
