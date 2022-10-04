@@ -116,41 +116,6 @@ def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
     return str(response.text)
 
 
-# TODO: test (Marco)
-def _generic_status_dict(
-    status_code: int, status_content: str, status_type: str
-) -> requests.Response:
-    """
-    Helper method which creates generic status dict.
-
-    Args:
-        status_code (int): Status code of the response
-        status_content (str): Status content of the response
-        status_type (str): Status type of the response (Information/ Warnung/ Fehler)
-
-    Returns:
-        requests.Response: the response from Destatis
-    """
-    # set up personalized requests.Reponse
-    request_status = requests.Response()
-    request_status.status_code = 42
-
-    # define status warning and texts
-    status_dict = {
-        "Status": {
-            "Code": status_code,
-            "Content": status_content,
-            "Type": status_type,
-        },
-    }
-
-    request_status._content = json.dumps(status_dict).encode(
-        "utf-8"
-    )  # pylint: disable=W0212
-
-    return request_status
-
-
 def _jobs_job_id(response) -> requests.Response:
     """
     Helper method which handles too large data requests and gives access to job id.
@@ -169,29 +134,20 @@ def _jobs_job_id(response) -> requests.Response:
     # check out job_id & inform user
     s = response.get("Status").get("Content")
     job_id = s.split(":")[1].strip()
-    if job_id is None:
-        failed_response = _generic_status_dict(
-            -1,
-            "Der Job konnte nicht erfolgreich angestoßen werden!",
-            "Fehler",
-        )
-
-        return failed_response
 
     # Notifying user about successfully starting a job and returning the response of said request
-    else:
-        logger.info(
-            "Der Status des Jobs kann über den catalogue/jobs Endpunkt "
-            "mit dem Kriterium 'selection': '*%s' abgerufen werden",
-            job_id,
-        )
-        logger.info(
-            "Wenn der Status des Jobs 'Fertig' ist, können die Daten über den data/resultfile Endpunkt "
-            "mit dem Kriterium 'name': '%s' abgerufen werden",
-            job_id,
-        )
+    logger.info(
+        "Der Status des Jobs kann über den catalogue/jobs Endpunkt "
+        "mit dem Kriterium 'selection': '*%s' abgerufen werden",
+        job_id,
+    )
+    logger.info(
+        "Wenn der Status des Jobs 'Fertig' ist, können die Daten über den data/resultfile Endpunkt "
+        "mit dem Kriterium 'name': '%s' abgerufen werden",
+        job_id,
+    )
 
-        return response
+    return response
 
 
 def _check_invalid_status_code(status_code: int) -> None:
