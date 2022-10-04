@@ -105,7 +105,7 @@ def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
                 as_json=True,
             )
 
-            return _jobs_job_id(jobs_response)
+            return str(_jobs_job_id(jobs_response))
     except json.decoder.JSONDecodeError:
         pass
 
