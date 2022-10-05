@@ -124,7 +124,10 @@ def test_check_invalid_destatis_status_code_with_error():
         assert str(e.value) == status_content
 
     # also test generic -1 error code
-    generic_error_status = _generic_request_status(code=-1)
+    generic_error_status = _generic_request_status(
+        code=-1,
+        status_content="Error: There is a system error. Please check your query parameters.",
+    )
 
     with pytest.raises(DestatisStatusError) as e:
         _check_invalid_destatis_status_code(generic_error_status)
