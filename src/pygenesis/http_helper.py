@@ -1,6 +1,8 @@
 """Wrapper module for the data endpoint."""
 import json
 import logging
+import re
+import time
 from pathlib import Path
 from typing import Union
 
@@ -16,6 +18,9 @@ from pygenesis.config import load_config
 from pygenesis.custom_exceptions import DestatisStatusError
 
 logger = logging.getLogger(__name__)
+
+JOB_ID_PATTERN = re.compile(r"\d+-\d+_\d+")
+JOB_TIMEOUT = 60
 
 
 def load_data(
@@ -45,10 +50,27 @@ def load_data(
         if hit_in_cash(cache_dir, name, params):
             data = read_from_cache(cache_dir, name, params)
         else:
-            data = get_data_from_endpoint(endpoint, method, params)
+            response = get_data_from_endpoint(endpoint, method, params)
+            data = response.text
+
+            # status code 98 means that the table is too big
+            # we have to start a job and wait for it to be ready
+            response_status_code = 200
+            try:
+                # test for job-relevant status code
+                response_status_code = response.json().get("Status").get("Code")
+            except json.decoder.JSONDecodeError:
+                pass
+
+            if response_status_code == 98:
+                job_response = start_job(endpoint, method, params)
+                job_id = get_job_id_from_response(job_response)
+                data = get_data_from_resultfile(job_id)
+
             cache_data(cache_dir, name, params, data)
     else:
-        data = get_data_from_endpoint(endpoint, method, params)
+        response = get_data_from_endpoint(endpoint, method, params)
+        data = response.text
 
     if as_json:
         parsed_data: dict = json.loads(data)
@@ -57,7 +79,9 @@ def load_data(
         return data
 
 
-def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
+def get_data_from_endpoint(
+    endpoint: str, method: str, params: dict
+) -> requests.Response:
     """
     Wrapper method which constructs an url for querying data from Destatis and
     sends a GET request.
@@ -68,7 +92,7 @@ def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
         params (dict): dictionary of query parameters
 
     Returns:
-        str: the raw text response from Destatis.
+        requests.Response: the response object holding the response from calling the Destatis endpoint.
     """
     config = load_config()
     url = f"{config['GENESIS API']['base_url']}{endpoint}/{method}"
@@ -84,65 +108,100 @@ def get_data_from_endpoint(endpoint: str, method: str, params: dict) -> str:
 
     response = requests.get(url, params=params_, timeout=(5, 15))
 
-    # if the response requires starting a job, new params are generated and the job is started
-    try:
-        # test for job-relevant status code
-        response_status_code = response.json().get("Status").get("Code")
-
-        if response_status_code == 98:
-            logger.info(
-                "Die Daten sind zu groß um direkt geladen zu werden, es wird ein Job angestoßen."
-            )
-            # updating params to start a job
-            new_params = params.copy()
-            new_params.update({"job": "true"})
-
-            # starting a job
-            jobs_response = load_data(
-                endpoint=endpoint,
-                method=method,
-                params=new_params,
-                as_json=True,
-            )
-
-            return str(_jobs_job_id(jobs_response))
-    except json.decoder.JSONDecodeError:
-        pass
-
     response.encoding = "UTF-8"
     _check_invalid_status_code(response.status_code)
     _check_invalid_destatis_status_code(response)
 
-    return str(response.text)
+    return response
 
 
-def _jobs_job_id(response) -> requests.Response:
-    """
-    Helper method which handles too large data requests and gives access to job id.
+def start_job(endpoint: str, method: str, params: dict) -> requests.Response:
+    """Small helper function to start a job in the background.
 
     Args:
-        response (json): Response from endpoint request with job set equal true
+        endpoint (str): Destatis endpoint (eg. data, catalogue, ..)
+        method (str): Destatis method (eg. cube, tablefile, ...)
+        params (dict): dictionary of query parameters
 
     Returns:
-        response: either failing response or response after starting a job
+        requests.Response: the response object holding the response from calling the Destatis endpoint.
     """
-    # check out job_id & inform user
-    s = response.get("Status").get("Content")
-    job_id = s.split(":")[1].strip()
-
-    # Notifying user about successfully starting a job and returning the response of said request
-    logger.info(
-        "Der Status des Jobs kann über den catalogue/jobs Endpunkt "
-        "mit dem Kriterium 'selection': '*%s' abgerufen werden",
-        job_id,
+    logger.warning(
+        "Die Tabelle ist zu groß, um direkt abgerufen zu werden. Es wird eine Verarbeitung im Hintergrund gestartet."
     )
-    logger.info(
-        "Wenn der Status des Jobs 'Fertig' ist, können die Daten über den data/resultfile Endpunkt "
-        "mit dem Kriterium 'name': '%s' abgerufen werden",
-        job_id,
+    params["job"] = "true"
+
+    # starting a job
+    response = get_data_from_endpoint(
+        endpoint=endpoint, method=method, params=params
     )
 
     return response
+
+
+def get_job_id_from_response(response: requests.Response) -> str:
+    """Get the job ID of a successful started job.
+
+    Args:
+        response (requests.Response): Response from endpoint request with job set equal to true.
+
+    Returns:
+        str: the job id.
+    """
+    # check out job_id & inform user
+    content = ""
+    try:
+        content = response.json().get("Status").get("Content")
+    except json.JSONDecodeError:
+        pass
+
+    match_result = JOB_ID_PATTERN.search(content)
+    job_id = match_result.group() if match_result is not None else ""
+
+    return job_id
+
+
+def get_data_from_resultfile(job_id: str) -> str:
+    """Get data from a job once it is finished or when the timeout is reached.
+
+    Args:
+        job_id (str): Job ID generated by Destatis API.
+
+    Returns:
+        str: The raw data of the table file as returned by Destatis.
+    """
+    params = {
+        "selection": "*" + job_id,
+        "searchcriterion": "code",
+        "sortcriterion": "code",
+        "type": "all",
+    }
+
+    time_ = time.perf_counter()
+
+    while (time.perf_counter() - time_) < JOB_TIMEOUT:
+        response = get_data_from_endpoint(
+            endpoint="catalogue", method="jobs", params=params
+        )
+
+        jobs = response.json().get("List")
+        if len(jobs) > 0 and jobs[0].get("State") == "Fertig":
+            break
+
+        time.sleep(5)
+    else:
+        return ""
+
+    params = {
+        "name": job_id,
+        "area": "all",
+        "compress": "false",
+        "format": "ffcsv",
+    }
+    response = get_data_from_endpoint(
+        endpoint="data", method="resultfile", params=params
+    )
+    return str(response.text)
 
 
 def _check_invalid_status_code(status_code: int) -> None:
@@ -212,13 +271,15 @@ def _check_destatis_status(destatis_status: dict) -> None:
 
     # check for generic/ system error
     if destatis_status_code == -1:
-        raise DestatisStatusError(
-            "Error: There is a system error. Please check your query parameters."
-        )
+        raise DestatisStatusError(destatis_status_content)
 
     # check for destatis/ query errors
     elif (destatis_status_code == 104) or (destatis_status_type in error_en_de):
-        raise DestatisStatusError(destatis_status_content)
+        if destatis_status_code == 98:
+            pass
+            # logger.warning(destatis_status_content)
+        else:
+            raise DestatisStatusError(destatis_status_content)
 
     # output warnings to user
     elif (destatis_status_code == 22) or (

@@ -8,8 +8,8 @@ from pygenesis.custom_exceptions import DestatisStatusError
 from pygenesis.http_helper import (
     _check_invalid_destatis_status_code,
     _check_invalid_status_code,
-    _jobs_job_id,
     get_data_from_endpoint,
+    get_job_id_from_response,
 )
 
 
@@ -80,7 +80,7 @@ def test_get_response_from_endpoint(mocker):
     get_data_from_endpoint(endpoint="endpoint", method="method", params={})
 
 
-def test__check_invalid_status_code_with_error():
+def test_check_invalid_status_code_with_error():
     """
     Basic tests to check an error status code (4xx, 5xx)
     for _handle_status_code method.
@@ -94,7 +94,7 @@ def test__check_invalid_status_code_with_error():
         )
 
 
-def test__check_invalid_status_code_without_error():
+def test_check_invalid_status_code_without_error():
     """
     Basic test to check a valid status code (2xx)
     for the _handle_status_code method.
@@ -106,7 +106,7 @@ def test__check_invalid_status_code_without_error():
         assert False
 
 
-def test__check_invalid_destatis_status_code_with_error():
+def test_check_invalid_destatis_status_code_with_error():
     """
     Basic tests to check an error status code as defined in the
     documentation via code (e.g. -1, 104) or type ('Error', 'Fehler').
@@ -134,7 +134,7 @@ def test__check_invalid_destatis_status_code_with_error():
     )
 
 
-def test__check_invalid_destatis_status_code_with_warning(caplog):
+def test_check_invalid_destatis_status_code_with_warning(caplog):
     """
     Basic tests to check a warning status code as defined in the
     documentation via code (e.g. 22) or type ('Warning', 'Warnung').
@@ -154,7 +154,7 @@ def test__check_invalid_destatis_status_code_with_warning(caplog):
         assert status_content in caplog.text
 
 
-def test__check_invalid_destatis_status_code_without_error(caplog):
+def test_check_invalid_destatis_status_code_without_error(caplog):
     """
     Basic tests to check the successful status code 0 or only text response as defined in the documentation.
     """
@@ -174,62 +174,22 @@ def test__check_invalid_destatis_status_code_without_error(caplog):
         assert False
 
 
-def test__jobs_job_id_successful():
-    """
-    Testing successfully returning the updated params dict and the correct job_id
-    """
-    status_content = (
-        "Der Bearbeitungsauftrag wurde erstellt. "
-        "Die Tabelle kann in Kürze als Ergebnis mit folgendem Namen abgerufen werden: 42151-0001_976196443"
-    )
-    response = json.loads(
-        str(
-            _generic_request_status(
-                True, 99, "Information", status_content
-            ).text
-        )
-    )
-    response = _jobs_job_id(response)
-    job_id = response.get("Status").get("Content").split(":")[1].strip()
-    assert job_id == f"42151-0001_976196443"
+def test_get_job_id_from_response():
+    response = requests.Response()
+    response._content = """{"Status": {"Content": "Der Bearbeitungsauftrag wurde erstellt. Die Tabelle kann in Kürze als Ergebnis mit folgendem Namen abgerufen werden: 42153-0001_001597503 (Mindestens ein Parameter enthält ungültige Werte. Er wurde angepasst, um den Service starten zu können.: stand"}}""".encode()
+    job_id = get_job_id_from_response(response)
+    assert job_id == "42153-0001_001597503"
 
 
-def test__jobs_job_id_no_status_content():
-    """
-    Testing no status_content
-    """
-    status_content = None
-    response = json.loads(
-        str(
-            _generic_request_status(
-                True, 99, "Information", status_content
-            ).text
-        )
-    )
-    try:
-        _jobs_job_id(response)
-    except AttributeError:
-        # failed successfully
-        pass
+def test_get_job_id_from_response_with_no_id():
+    response = requests.Response()
+    response._content = """{"Status": {"Content": "Der Bearbeitungsauftrag wurde erstellt."}}""".encode()
+    job_id = get_job_id_from_response(response)
+    assert job_id == ""
 
 
-def test__jobs_job_id_wrong_status_code():
-    """
-    Testing no status_content
-    """
-    status_content = (
-        "Der Bearbeitungsauftrag wurde erstellt. "
-        "Die Tabelle kann in Kürze als Ergebnis mit folgendem Namen abgerufen werden: 42151-0001_976196443"
-    )
-    response = json.loads(
-        str(
-            _generic_request_status(
-                True, 98, "Information", status_content
-            ).text
-        )
-    )
-    try:
-        _jobs_job_id(response)
-    except AssertionError:
-        # failed successfully
-        pass
+def test_get_job_id_from_response_with_no_json():
+    response = requests.Response()
+    response._content = "Der Bearbeitungsauftrag wurde erstellt. Die Tabelle kann in Kürze als Ergebnis mit folgendem Namen abgerufen werden: 42153-0001_001597503 (Mindestens ein Parameter enthält ungültige Werte. Er wurde angepasst, um den Service starten zu können.: stand".encode()
+    job_id = get_job_id_from_response(response)
+    assert job_id == ""
