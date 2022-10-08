@@ -15,17 +15,13 @@ from pystatis.http_helper import (
 
 def _generic_request_status(
     status_response: bool = True,
+    status_code: int = 200,
     code: int = 0,
     status_type: str = "Information",
     status_content: str = "Erfolg/ Success/ Some Issue",
 ) -> requests.Response:
     """
     Helper method which allows to create a generic request.Response that covers all Destatis answers
-
-    Args:
-        status_response (bool): Whether Destatis answer contains a status response
-        code (str): Status response code
-        status_type (str): Status reponse type/ name
 
     Returns:
         requests.Response: the response from Destatis
@@ -47,7 +43,7 @@ def _generic_request_status(
 
     # set up generic requests.Response
     request_status = requests.Response()
-    request_status.status_code = 200  # success
+    request_status.status_code = status_code  # success
 
     # Define UTF-8 encoding as requests guesses otherwise
     if status_response:
@@ -87,10 +83,11 @@ def test_check_invalid_status_code_with_error():
     """
     for status_code in [400, 500]:
         with pytest.raises(requests.exceptions.HTTPError) as e:
-            _check_invalid_status_code(status_code)
+            _check_invalid_status_code(
+                _generic_request_status(status_code=status_code)
+            )
         assert (
-            str(e.value)
-            == f"Error {status_code}: The server returned a {status_code} status code"
+            str(e.value) == f"The server returned a {status_code} status code."
         )
 
 
@@ -99,9 +96,8 @@ def test_check_invalid_status_code_without_error():
     Basic test to check a valid status code (2xx)
     for the _handle_status_code method.
     """
-    status_code = 200
     try:
-        _check_invalid_status_code(status_code)
+        _check_invalid_status_code(_generic_request_status())
     except Exception:
         assert False
 

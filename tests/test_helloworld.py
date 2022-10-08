@@ -1,4 +1,4 @@
-from pystatis.helloworld import logincheck, whoami
+from pystatis import logincheck, whoami
 from tests.test_http_helper import _generic_request_status
 
 

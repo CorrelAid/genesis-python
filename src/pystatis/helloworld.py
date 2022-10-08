@@ -19,7 +19,7 @@ def whoami() -> str:
 
     response = requests.get(url, timeout=(1, 15))
 
-    _check_invalid_status_code(response.status_code)
+    _check_invalid_status_code(response)
 
     return str(response.text)
 
@@ -44,6 +44,6 @@ def logincheck() -> str:
 
     # NOTE: Cannot use get_data_from_endpoint due to colliding
     # and misleading usage of "Status" key in API response
-    _check_invalid_status_code(response.status_code)
+    _check_invalid_status_code(response)
 
     return str(response.text)
