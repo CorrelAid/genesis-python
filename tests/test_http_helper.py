@@ -9,6 +9,7 @@ from pygenesis.http_helper import (
     _check_invalid_destatis_status_code,
     _check_invalid_status_code,
     get_data_from_endpoint,
+    get_job_id_from_response,
 )
 
 
@@ -16,6 +17,7 @@ def _generic_request_status(
     status_response: bool = True,
     code: int = 0,
     status_type: str = "Information",
+    status_content: str = "Erfolg/ Success/ Some Issue",
 ) -> requests.Response:
     """
     Helper method which allows to create a generic request.Response that covers all Destatis answers
@@ -36,14 +38,14 @@ def _generic_request_status(
         },
         "Status": {
             "Code": code,
-            "Content": "Erfolg/ Success/ Some Issue",
+            "Content": status_content,
             "Type": status_type,
         },
     }
 
     response_text = "Some text for a successful response without status..."
 
-    # set up generic requests.Reponse
+    # set up generic requests.Response
     request_status = requests.Response()
     request_status.status_code = 200  # success
 
@@ -78,7 +80,7 @@ def test_get_response_from_endpoint(mocker):
     get_data_from_endpoint(endpoint="endpoint", method="method", params={})
 
 
-def test__check_invalid_status_code_with_error():
+def test_check_invalid_status_code_with_error():
     """
     Basic tests to check an error status code (4xx, 5xx)
     for _handle_status_code method.
@@ -92,7 +94,7 @@ def test__check_invalid_status_code_with_error():
         )
 
 
-def test__check_invalid_status_code_without_error():
+def test_check_invalid_status_code_without_error():
     """
     Basic test to check a valid status code (2xx)
     for the _handle_status_code method.
@@ -104,7 +106,7 @@ def test__check_invalid_status_code_without_error():
         assert False
 
 
-def test__check_invalid_destatis_status_code_with_error():
+def test_check_invalid_destatis_status_code_with_error():
     """
     Basic tests to check an error status code as defined in the
     documentation via code (e.g. -1, 104) or type ('Error', 'Fehler').
@@ -122,7 +124,10 @@ def test__check_invalid_destatis_status_code_with_error():
         assert str(e.value) == status_content
 
     # also test generic -1 error code
-    generic_error_status = _generic_request_status(code=-1)
+    generic_error_status = _generic_request_status(
+        code=-1,
+        status_content="Error: There is a system error. Please check your query parameters.",
+    )
 
     with pytest.raises(DestatisStatusError) as e:
         _check_invalid_destatis_status_code(generic_error_status)
@@ -132,7 +137,7 @@ def test__check_invalid_destatis_status_code_with_error():
     )
 
 
-def test__check_invalid_destatis_status_code_with_warning(caplog):
+def test_check_invalid_destatis_status_code_with_warning(caplog):
     """
     Basic tests to check a warning status code as defined in the
     documentation via code (e.g. 22) or type ('Warning', 'Warnung').
@@ -152,7 +157,7 @@ def test__check_invalid_destatis_status_code_with_warning(caplog):
         assert status_content in caplog.text
 
 
-def test__check_invalid_destatis_status_code_without_error(caplog):
+def test_check_invalid_destatis_status_code_without_error(caplog):
     """
     Basic tests to check the successful status code 0 or only text response as defined in the documentation.
     """
@@ -170,3 +175,24 @@ def test__check_invalid_destatis_status_code_without_error(caplog):
         _check_invalid_destatis_status_code(status_text)
     except Exception:
         assert False
+
+
+def test_get_job_id_from_response():
+    response = requests.Response()
+    response._content = """{"Status": {"Content": "Der Bearbeitungsauftrag wurde erstellt. Die Tabelle kann in Kürze als Ergebnis mit folgendem Namen abgerufen werden: 42153-0001_001597503 (Mindestens ein Parameter enthält ungültige Werte. Er wurde angepasst, um den Service starten zu können.: stand"}}""".encode()
+    job_id = get_job_id_from_response(response)
+    assert job_id == "42153-0001_001597503"
+
+
+def test_get_job_id_from_response_with_no_id():
+    response = requests.Response()
+    response._content = """{"Status": {"Content": "Der Bearbeitungsauftrag wurde erstellt."}}""".encode()
+    job_id = get_job_id_from_response(response)
+    assert job_id == ""
+
+
+def test_get_job_id_from_response_with_no_json():
+    response = requests.Response()
+    response._content = "Der Bearbeitungsauftrag wurde erstellt. Die Tabelle kann in Kürze als Ergebnis mit folgendem Namen abgerufen werden: 42153-0001_001597503 (Mindestens ein Parameter enthält ungültige Werte. Er wurde angepasst, um den Service starten zu können.: stand".encode()
+    job_id = get_job_id_from_response(response)
+    assert job_id == ""
