@@ -11,8 +11,20 @@ from pystatis.cache import clear_cache
 from pystatis.config import init_config
 from pystatis.cube import Cube
 from pystatis.find import Find
+from pystatis.helloworld import logincheck, whoami
+from pystatis.profile import change_password, remove_result
 from pystatis.table import Table
 
 __version__ = "0.1.0"
 
-__all__ = ["clear_cache", "init_config", "Cube", "Table", "Find"]
+__all__ = [
+    "change_password",
+    "clear_cache",
+    "Cube",
+    "Find",
+    "init_config",
+    "logincheck",
+    "remove_result",
+    "Table",
+    "whoami",
+]
