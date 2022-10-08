@@ -39,7 +39,7 @@ jobs:
         poetry install
     - name: Run tests
       run: |
-        poetry run pytest --cov=pygenesis tests
+        poetry run pytest --cov=pystatis tests
   code-quality:
     strategy:
       fail-fast: false

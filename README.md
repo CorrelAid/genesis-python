@@ -1,6 +1,6 @@
-# pygenesis
+# pystatis
 
-pygenesis is a Python wrapper for the GENESIS web service interface (API).
+pystatis is a Python wrapper for the GENESIS web service interface (API).
 
 > The GENESIS-Online database of the Federal Statistical Office contains a wide range of tables which you can configure according to your needs. As a matter of fact, GENESIS-Online can be used free of charge and without registering under the "Data Licence Germany - Namensnennung - Version 2.0".
 
@@ -11,15 +11,15 @@ See the official documentation [here](https://www.destatis.de/EN/Service/OpenDat
 You can install the package via
 
 ```bash
-$ pip install pygenesis
+$ pip install pystatis
 ```
 
-If everything worked out correctly, you should be able to import pygenesis like this
+If everything worked out correctly, you should be able to import pystatis like this
 
 ```python
-import pygenesis as pgen
+import pystatis as pystat
 
-print("Version:", pgen.__version__)
+print("Version:", pystat.__version__)
 ```
 
 ## Developer information

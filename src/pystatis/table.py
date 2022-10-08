@@ -3,7 +3,7 @@ from io import StringIO
 
 import pandas as pd
 
-from pygenesis.http_helper import load_data
+from pystatis.http_helper import load_data
 
 
 class Table:

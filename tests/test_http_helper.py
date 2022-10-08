@@ -4,8 +4,8 @@ import logging
 import pytest
 import requests
 
-from pygenesis.custom_exceptions import DestatisStatusError
-from pygenesis.http_helper import (
+from pystatis.custom_exceptions import DestatisStatusError
+from pystatis.http_helper import (
     _check_invalid_destatis_status_code,
     _check_invalid_status_code,
     get_data_from_endpoint,
@@ -64,10 +64,10 @@ def test_get_response_from_endpoint(mocker):
     of subfunctions and specific cases below.
     """
     mocker.patch(
-        "pygenesis.http_helper.requests", return_value=_generic_request_status()
+        "pystatis.http_helper.requests", return_value=_generic_request_status()
     )
     mocker.patch(
-        "pygenesis.http_helper.load_config",
+        "pystatis.http_helper.load_config",
         return_value={
             "GENESIS API": {
                 "base_url": "mocked_url",

@@ -1,4 +1,4 @@
-from pygenesis import __version__
+from pystatis import __version__
 
 
 def test_version():

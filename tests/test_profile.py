@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from pygenesis.profile import change_password, remove_result
+from pystatis.profile import change_password, remove_result
 from tests.test_http_helper import _generic_request_status
 
 
 @pytest.fixture()
 def cache_dir(tmp_path_factory):
     # remove white-space and non-latin characters (issue fo some user names)
-    temp_dir = str(tmp_path_factory.mktemp(".pygenesis"))
+    temp_dir = str(tmp_path_factory.mktemp(".pystatis"))
     temp_dir = re.sub(r"[^\x00-\x7f]", r"", temp_dir.replace(" ", ""))
 
     return Path(temp_dir)
@@ -25,13 +25,13 @@ def test_change_password(mocker, cache_dir):
         "username": "JaneDoe",
         "password": "password",
     }
-    mocker.patch("pygenesis.profile.load_config", return_value=config)
+    mocker.patch("pystatis.profile.load_config", return_value=config)
     mocker.patch(
-        "pygenesis.profile.load_data",
+        "pystatis.profile.load_data",
         return_value=str(_generic_request_status().text),
     )
     mocker.patch(
-        "pygenesis.profile.get_config_path_from_settings",
+        "pystatis.profile.get_config_path_from_settings",
         return_value=cache_dir / "config.ini",
     )
 
@@ -43,14 +43,14 @@ def test_change_password(mocker, cache_dir):
 def test_change_password_keyerror(mocker, cache_dir):
     # define empty config (no password)
     mocker.patch(
-        "pygenesis.profile.load_config", return_value={"GENESIS API": {}}
+        "pystatis.profile.load_config", return_value={"GENESIS API": {}}
     )
     mocker.patch(
-        "pygenesis.profile.load_data",
+        "pystatis.profile.load_data",
         return_value=str(_generic_request_status().text),
     )
     mocker.patch(
-        "pygenesis.profile.get_config_path_from_settings",
+        "pystatis.profile.get_config_path_from_settings",
         return_value=cache_dir / "config.ini",
     )
 
@@ -65,7 +65,7 @@ def test_change_password_keyerror(mocker, cache_dir):
 
 def test_remove_result(mocker):
     mocker.patch(
-        "pygenesis.profile.load_data",
+        "pystatis.profile.load_data",
         return_value=str(_generic_request_status().text),
     )
 

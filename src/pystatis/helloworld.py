@@ -2,8 +2,8 @@
 
 import requests
 
-from pygenesis.config import load_config
-from pygenesis.http_helper import _check_invalid_status_code
+from pystatis.config import load_config
+from pystatis.http_helper import _check_invalid_status_code
 
 
 def whoami() -> str:

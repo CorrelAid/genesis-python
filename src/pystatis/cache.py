@@ -9,7 +9,7 @@ from datetime import date
 from pathlib import Path
 from typing import Optional
 
-from pygenesis.config import load_config
+from pystatis.config import load_config
 
 logger = logging.getLogger(__name__)
 JOB_ID_PATTERN = r"\d+"

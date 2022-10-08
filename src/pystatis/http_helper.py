@@ -8,14 +8,14 @@ from typing import Union
 
 import requests
 
-from pygenesis.cache import (
+from pystatis.cache import (
     cache_data,
     hit_in_cash,
     normalize_name,
     read_from_cache,
 )
-from pygenesis.config import load_config
-from pygenesis.custom_exceptions import DestatisStatusError
+from pystatis.config import load_config
+from pystatis.custom_exceptions import DestatisStatusError
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ def get_data_from_endpoint(
     response = requests.get(url, params=params_, timeout=(5, 15))
 
     response.encoding = "UTF-8"
-    _check_invalid_status_code(response.status_code)
+    _check_invalid_status_code(response)
     _check_invalid_destatis_status_code(response)
 
     return response
@@ -204,19 +204,27 @@ def get_data_from_resultfile(job_id: str) -> str:
     return str(response.text)
 
 
-def _check_invalid_status_code(status_code: int) -> None:
+def _check_invalid_status_code(response: requests.Response) -> None:
     """
     Helper method which handles the status code from the response
 
     Args:
-        status_code (int): Status code from the response object
+        response (requests.Response): The response object from the request
 
     Raises:
         AssertionError: Assert that status is not 4xx or 5xx
     """
-    if status_code // 100 in [4, 5]:
+    if response.status_code // 100 in [4, 5]:
+        try:
+            body: dict = response.json()
+        except json.JSONDecodeError:
+            body = {}
+
+        content = body.get("Content")
+        code = body.get("Code")
+        logger.error("Error Code: %s. Content: %s.", code, content)
         raise requests.exceptions.HTTPError(
-            f"Error {status_code}: The server returned a {status_code} status code"
+            f"The server returned a {response.status_code} status code."
         )
 
 

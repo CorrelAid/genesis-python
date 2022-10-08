@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-import pygenesis.config
-from pygenesis.config import (
+import pystatis.config
+from pystatis.config import (
     DEFAULT_SETTINGS_FILE,
     _write_config,
     create_settings,
@@ -20,7 +20,7 @@ from pygenesis.config import (
 @pytest.fixture()
 def config_dir(tmp_path_factory):
     # remove white-space and non-latin characters (issue fo some user names)
-    temp_dir = str(tmp_path_factory.mktemp(".pygenesis"))
+    temp_dir = str(tmp_path_factory.mktemp(".pystatis"))
     temp_dir = re.sub(r"[^\x00-\x7f]", r"", temp_dir.replace(" ", ""))
 
     return Path(temp_dir)
@@ -38,9 +38,9 @@ def test_create_settings_is_run_on_import():
 
 
 def test_create_settings(config_dir, mocker):
-    mocker.patch.object(pygenesis.config, "DEFAULT_CONFIG_DIR", config_dir)
+    mocker.patch.object(pystatis.config, "DEFAULT_CONFIG_DIR", config_dir)
     mocker.patch.object(
-        pygenesis.config, "DEFAULT_SETTINGS_FILE", config_dir / "settings.ini"
+        pystatis.config, "DEFAULT_SETTINGS_FILE", config_dir / "settings.ini"
     )
     create_settings()
 

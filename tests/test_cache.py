@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from pygenesis.cache import (
+from pystatis.cache import (
     _build_file_path,
     cache_data,
     clear_cache,
@@ -11,7 +11,7 @@ from pygenesis.cache import (
     normalize_name,
     read_from_cache,
 )
-from pygenesis.config import (
+from pystatis.config import (
     DEFAULT_SETTINGS_FILE,
     _write_config,
     init_config,
@@ -23,7 +23,7 @@ from pygenesis.config import (
 @pytest.fixture()
 def cache_dir(tmp_path_factory):
     # remove white-space and non-latin characters (issue fo some user names)
-    temp_dir = str(tmp_path_factory.mktemp(".pygenesis"))
+    temp_dir = str(tmp_path_factory.mktemp(".pystatis"))
     temp_dir = re.sub(r"[^\x00-\x7f]", r"", temp_dir.replace(" ", ""))
 
     init_config(temp_dir)

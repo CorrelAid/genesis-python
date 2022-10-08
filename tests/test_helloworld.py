@@ -1,10 +1,10 @@
-from pygenesis.helloworld import logincheck, whoami
+from pystatis.helloworld import logincheck, whoami
 from tests.test_http_helper import _generic_request_status
 
 
 def test_whoami(mocker):
     mocker.patch(
-        "pygenesis.helloworld.load_config",
+        "pystatis.helloworld.load_config",
         return_value={
             "GENESIS API": {
                 "base_url": "mocked_url",
@@ -15,7 +15,7 @@ def test_whoami(mocker):
     )
 
     mocker.patch(
-        "pygenesis.helloworld.requests.get",
+        "pystatis.helloworld.requests.get",
         return_value=_generic_request_status(),
     )
 
@@ -26,7 +26,7 @@ def test_whoami(mocker):
 
 def test_logincheck(mocker):
     mocker.patch(
-        "pygenesis.helloworld.load_config",
+        "pystatis.helloworld.load_config",
         return_value={
             "GENESIS API": {
                 "base_url": "mocked_url",
@@ -36,7 +36,7 @@ def test_logincheck(mocker):
         },
     )
     mocker.patch(
-        "pygenesis.helloworld.requests.get",
+        "pystatis.helloworld.requests.get",
         return_value=_generic_request_status(),
     )
 

@@ -1,7 +1,7 @@
 [tool.poetry]
 authors = ["CorrelAid <info@correlaid.org>"]
 description = "Python wrapper for GENESIS web service interface (API) of the Federal Statistical Office."
-name = "pygenesis"
+name = "pystatis"
 version = "0.1.0"
 
 [tool.poetry.dependencies]

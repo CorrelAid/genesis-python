@@ -4,7 +4,7 @@ from typing import List
 
 import pandas as pd
 
-from pygenesis.http_helper import load_data
+from pystatis.http_helper import load_data
 
 
 class Cube:
@@ -152,8 +152,8 @@ def assign_correct_types(cube: dict) -> dict:
             cast_type = None  # type: ignore[assignment]
 
         if cast_type is not None:
-            cube["QEI"].loc[:, f"{var}_WERT"] = (
-                cube["QEI"].loc[:, f"{var}_WERT"].astype(cast_type)
+            cube["QEI"][f"{var}_WERT"] = cube["QEI"][f"{var}_WERT"].astype(
+                cast_type
             )
 
     return cube
