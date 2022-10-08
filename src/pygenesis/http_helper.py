@@ -277,7 +277,6 @@ def _check_destatis_status(destatis_status: dict) -> None:
     elif (destatis_status_code == 104) or (destatis_status_type in error_en_de):
         if destatis_status_code == 98:
             pass
-            # logger.warning(destatis_status_content)
         else:
             raise DestatisStatusError(destatis_status_content)
 
