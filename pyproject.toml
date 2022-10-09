@@ -6,10 +6,10 @@ authors = [
     "Felix Schmitz <felix.schmitz@philosophy-economics.de>",
     "Frederik Hering <jobs.fhering@gmail.com>",
     "Marco Hübner <marco_huebner1@gmx.de>",
-    "Michael Aydinbas <michael.aydinbas@gmail.com",
+    "Michael Aydinbas <michael.aydinbas@gmail.com>",
 ]
 maintainers = [
-    "Michael Aydinbas <michael.aydinbas@gmail.com"
+    "Michael Aydinbas <michael.aydinbas@gmail.com>"
 ]
 description = "Python wrapper for GENESIS web service interface (API) of the Federal Statistical Office."
 name = "pystatis"
