@@ -26,7 +26,7 @@ def cache_dir(tmp_path_factory):
     temp_dir = str(tmp_path_factory.mktemp(".pystatis"))
     temp_dir = re.sub(r"[^\x00-\x7f]", r"", temp_dir.replace(" ", ""))
 
-    init_config(temp_dir)
+    init_config("myuser", "mypw", temp_dir)
 
     config = load_config()
     cache_dir = Path(config["DATA"]["cache_dir"])
