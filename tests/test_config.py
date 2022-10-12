@@ -64,7 +64,7 @@ def test_init_config_with_config_dir(config_dir, caplog):
     caplog.clear()
     caplog.set_level(logging.INFO)
 
-    init_config(config_dir)
+    init_config("myuser", "mypw", config_dir)
 
     assert len(caplog.records) == 2
     assert caplog.records[0].levelname == "INFO"
@@ -86,7 +86,7 @@ def test_init_config_with_config_dir(config_dir, caplog):
 
 
 def test_load_config(config_dir):
-    init_config(config_dir)
+    init_config("myuser", "mypw123!", config_dir)
     config: ConfigParser = load_config()
 
     for section in ["GENESIS API", "DATA"]:
@@ -100,9 +100,12 @@ def test_load_config(config_dir):
     ]
     assert config.options("DATA") == ["cache_dir"]
 
+    assert config["GENESIS API"]["username"] == "myuser"
+    assert config["GENESIS API"]["password"] == "mypw123!"
+
 
 def test_missing_username(config_dir, caplog):
-    init_config(config_dir)
+    init_config("", "", config_dir)
 
     caplog.clear()
 
@@ -113,7 +116,7 @@ def test_missing_username(config_dir, caplog):
 
 
 def test_missing_file(config_dir, caplog):
-    init_config(config_dir)
+    init_config("", "", config_dir)
     (config_dir / "config.ini").unlink()
 
     caplog.clear()
