@@ -55,12 +55,16 @@ def get_config_path_from_settings() -> Path:
     return Path(settings.get("SETTINGS", "config_dir")) / "config.ini"
 
 
-def init_config(config_dir: Path = DEFAULT_CONFIG_DIR) -> None:
+def init_config(
+    username: str, password: str, config_dir: Path = DEFAULT_CONFIG_DIR
+) -> None:
     """One-time function to be called for new users to create a new config.ini with default values.
 
     Stores username and password for the GENESIS API, among other settings.
 
     Args:
+        username (str): username used to login to GENESIS-Online.
+        password (str): password used to login to GENESIS-Online.
         config_dir (Path, optional): Path to the root config directory. Defaults to the user home directory.
     """
     default_settings = load_settings()
@@ -75,6 +79,8 @@ def init_config(config_dir: Path = DEFAULT_CONFIG_DIR) -> None:
 
     config_file = get_config_path_from_settings()
     config = _create_default_config()
+    config["GENESIS API"]["username"] = username
+    config["GENESIS API"]["password"] = password
     _write_config(config, config_file)
 
     cache_dir = Path(config["DATA"]["cache_dir"])
